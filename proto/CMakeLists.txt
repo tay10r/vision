@@ -1,11 +1,15 @@
 cmake_minimum_required(VERSION 3.9.6)
 
 add_library(vision_proto
+  src/exception.cpp
   src/lexer.cpp
   src/parser.cpp
   src/line_buffer.cpp
   src/interpreter.cpp
-  src/server.cpp)
+  src/server.cpp
+  src/token.cpp)
+
+target_compile_features(vision_proto PUBLIC cxx_std_17)
 
 target_include_directories(vision_proto PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 

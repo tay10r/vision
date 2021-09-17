@@ -10,20 +10,67 @@
 #include <vision/int_expr.hpp>
 #include <vision/type_constructor.hpp>
 
-#include <stdexcept>
-#include <vector>
+#include <vision/exception.hpp>
 
 namespace vision {
 
 namespace {
 
-class SyntaxError final : public std::runtime_error
+void
+ThrowSyntaxError(const Token& token, const std::string_view& msg)
 {
-public:
-  using std::runtime_error::runtime_error;
-};
+  throw SyntaxError(token.line, token.column, msg);
+}
 
 } // namespace
+
+Parser::Parser(Lexer& lexer)
+{
+  m_type_map["int"] = TypeID::Int;
+
+  m_type_map["float"] = TypeID::Float;
+
+  m_type_map["vec2"] = TypeID::Vec2;
+  m_type_map["vec3"] = TypeID::Vec3;
+  m_type_map["vec4"] = TypeID::Vec4;
+
+  m_type_map["vec2i"] = TypeID::Vec2i;
+  m_type_map["vec3i"] = TypeID::Vec3i;
+  m_type_map["vec4i"] = TypeID::Vec4i;
+
+  while (!lexer.AtEnd()) {
+
+    auto token = lexer.Scan();
+
+    if (!token.has_value() || token == TokenKind::Space)
+      continue;
+
+    m_tokens.emplace_back(std::move(*token));
+  }
+}
+
+auto
+Parser::GetTypeID(const std::optional<Token>& token) const
+  -> std::optional<TypeID>
+{
+  if (token != TokenKind::ID)
+    return std::nullopt;
+
+  auto it = m_type_map.find(token->data);
+  if (it == m_type_map.end())
+    return std::nullopt;
+
+  return it->second;
+}
+
+auto
+Parser::Remaining() const noexcept -> size_t
+{
+  if (m_token_offset > m_tokens.size())
+    return 0;
+  else
+    return m_tokens.size() - m_token_offset;
+}
 
 auto
 Parser::ParseStmt() -> std::unique_ptr<Stmt>
@@ -46,30 +93,34 @@ Parser::ParseStmt() -> std::unique_ptr<Stmt>
 auto
 Parser::ParseAssignStmt() -> std::unique_ptr<Stmt>
 {
-  std::string let_token = m_lexer.ScanIdentifier("let");
-  if (let_token.empty())
+  auto let = Peek(0);
+  if (let != "let")
     return nullptr;
 
-  m_lexer.ScanSpace();
+  auto var_name = Peek(1);
 
-  std::string var_name = m_lexer.ScanIdentifier();
-  if (var_name.empty())
-    return nullptr;
+  if (var_name != TokenKind::ID)
+    ThrowSyntaxError(*let, "Expected variable name after this.");
 
-  m_lexer.ScanSpace();
+  auto equal_sign = Peek(2);
+  if (equal_sign != "=")
+    ThrowSyntaxError(*var_name, "Expected a \"=\" after this.");
 
-  std::string equal_sign = m_lexer.ScanSymbol('=');
-  if (equal_sign.empty())
-    return nullptr;
-
-  m_lexer.ScanSpace();
+  Advance(3);
 
   auto init_expr = ParseExpr();
   if (!init_expr)
-    return nullptr;
+    ThrowSyntaxError(*equal_sign, "Expected an expression after this.");
+
+  if (Peek(0) != TokenKind::Newline) {
+    ThrowSyntaxError(m_tokens.at(m_token_offset - 1),
+                     "Expected newline after this.");
+  }
+
+  Advance(1);
 
   return std::unique_ptr<Stmt>(
-    new AssignStmt(std::move(var_name), std::move(init_expr)));
+    new AssignStmt(std::move(*var_name), std::move(init_expr)));
 }
 
 auto
@@ -79,11 +130,15 @@ Parser::ParseExprStmt() -> std::unique_ptr<Stmt>
   if (!expr)
     return nullptr;
 
-  m_lexer.ScanSpace();
+  auto newline = Peek(0);
 
-  auto newline = m_lexer.ScanNewline();
-  if (newline.empty())
-    return nullptr;
+  if (!newline) {
+    if (Remaining() > 0)
+      ThrowSyntaxError(m_tokens.at(m_token_offset - 1),
+                       "Expected newline after this.");
+  }
+
+  Advance(1);
 
   return std::unique_ptr<Stmt>(new ExprStmt(std::move(expr)));
 }
@@ -91,9 +146,12 @@ Parser::ParseExprStmt() -> std::unique_ptr<Stmt>
 auto
 Parser::ParseEmptyStmt() -> std::unique_ptr<Stmt>
 {
-  auto newline_token = m_lexer.ScanNewline();
-  if (newline_token.empty())
+  auto newline_token = Peek(0);
+
+  if (!newline_token)
     return nullptr;
+
+  Advance(1);
 
   return std::unique_ptr<Stmt>(new EmptyStmt());
 }
@@ -119,33 +177,37 @@ Parser::ParseExpr() -> std::unique_ptr<Expr>
 auto
 Parser::ParseIntExpr() -> std::unique_ptr<Expr>
 {
-  std::string int_token = m_lexer.ScanInteger();
-  if (int_token.empty())
+  std::optional<Token> int_token = Peek(0);
+  if (int_token != TokenKind::Int)
     return nullptr;
 
-  return std::unique_ptr<Expr>(new IntExpr(std::stoi(int_token)));
+  Advance(1);
+
+  std::string data_copy(int_token->data);
+
+  return std::unique_ptr<Expr>(new IntExpr(std::stoi(&data_copy[0])));
 }
 
 auto
 Parser::ParseExprList(char l_sym, char r_sym)
-  -> std::vector<std::unique_ptr<Expr>>
+  -> std::optional<std::vector<std::unique_ptr<Expr>>>
 {
+  std::optional<Token> l_paren = Peek(0);
+
+  if (l_paren != l_sym)
+    return std::nullopt;
+
+  Advance(1);
+
   std::vector<std::unique_ptr<Expr>> args;
 
-  std::string l_paren = m_lexer.ScanSymbol(l_sym);
-  if (l_paren.empty())
-    return args;
-
-  while (m_lexer.Remaining() > 0) {
-
-    m_lexer.ScanSpace();
+  while (Remaining() > 0) {
 
     if (args.size() > 0) {
-
-      if (m_lexer.ScanSymbol(',').empty())
+      if (Peek(0) != ",")
         break;
-
-      m_lexer.ScanSpace();
+      else
+        Advance(1);
     }
 
     auto arg = ParseExpr();
@@ -155,9 +217,12 @@ Parser::ParseExprList(char l_sym, char r_sym)
     args.emplace_back(std::move(arg));
   }
 
-  std::string r_paren = m_lexer.ScanSymbol(r_sym);
-  if (r_paren.empty())
-    throw SyntaxError("Function call arguments missing ')'.");
+  std::optional<Token> r_paren = Peek(0);
+
+  if (r_paren != r_sym)
+    ThrowSyntaxError(*l_paren, "Missing \")\".");
+
+  Advance(1);
 
   return args;
 }
@@ -165,30 +230,75 @@ Parser::ParseExprList(char l_sym, char r_sym)
 auto
 Parser::ParseCallExpr() -> std::unique_ptr<Expr>
 {
-  std::string func_name = m_lexer.ScanIdentifier();
-  if (func_name.empty())
+  std::optional<Token> func_name = Peek(0);
+
+  if (func_name != TokenKind::ID)
     return nullptr;
 
-  m_lexer.ScanSpace();
+  if (GetTypeID(func_name))
+    return nullptr;
 
-  std::vector<std::unique_ptr<Expr>> args = ParseExprList('(', ')');
+  Advance(1);
+
+  std::optional<std::vector<std::unique_ptr<Expr>>> args =
+    ParseExprList('(', ')');
+
+  if (!args)
+    ThrowSyntaxError(*func_name, "Expected arguments after function name.");
 
   return std::unique_ptr<Expr>(
-    new CallExpr(std::move(func_name), std::move(args)));
+    new CallExpr(std::move(*func_name), std::move(*args)));
 }
 
 auto
 Parser::ParseTypeConstructor() -> std::unique_ptr<Expr>
 {
-  const TypeID* type_id = m_lexer.ScanType();
+  auto type_name = Peek(0);
+
+  if (type_name != TokenKind::ID)
+    return nullptr;
+
+  std::optional<TypeID> type_id = GetTypeID(type_name);
+
   if (!type_id)
     return nullptr;
 
-  m_lexer.ScanSpace();
+  Advance(1);
 
-  std::vector<std::unique_ptr<Expr>> args = ParseExprList('(', ')');
+  std::optional<std::vector<std::unique_ptr<Expr>>> args =
+    ParseExprList('(', ')');
 
-  return std::unique_ptr<Expr>(new TypeConstructor(*type_id, std::move(args)));
+  if (!args)
+    ThrowSyntaxError(*type_name, "Expected arguments after this.");
+
+  return std::unique_ptr<Expr>(new TypeConstructor(*type_id, std::move(*args)));
+}
+
+auto
+Parser::Peek(size_t offset) const noexcept -> std::optional<Token>
+{
+  if ((m_token_offset + offset) < m_tokens.size())
+    return m_tokens[m_token_offset + offset];
+  else
+    return std::nullopt;
+}
+
+auto
+Parser::MakeMemo() const noexcept -> Memo
+{
+  return Memo{ m_token_offset };
+}
+
+void
+Parser::Restore(const Memo& memo)
+{
+  m_token_offset = memo.token_offset;
+}
+
+void
+Parser::Advance(size_t count)
+{
+  m_token_offset += count;
 }
 
 } // namespace vision

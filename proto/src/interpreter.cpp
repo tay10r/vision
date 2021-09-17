@@ -204,9 +204,9 @@ public:
     for (const auto& call_value : call_values)
       call_value_ptrs.emplace_back(call_value.get());
 
-    std::string func_name = call_expr.GetFuncName();
+    Token func_name = call_expr.GetFuncName();
 
-    Function* func = GetInterpreter().FindFunc(func_name);
+    Function* func = GetInterpreter().FindFunc(func_name.data);
     if (!func)
       throw InterpError("Failed to find function.");
 
@@ -291,7 +291,7 @@ public:
 
     assign_stmt.GetExpr().Accept(expr_interpreter);
 
-    m_interp.SetVar(assign_stmt.GetVarName(), expr_interpreter.PopValue());
+    m_interp.SetVar(assign_stmt.GetVarName().data, expr_interpreter.PopValue());
   }
 
   void Visit(const ExprStmt& expr_stmt) override
@@ -327,9 +327,7 @@ Interpreter::Run(LineBuffer& line_buffer)
 
     std::string line = line_buffer.PopLine();
 
-    Lexer lexer;
-
-    lexer.Append(line.c_str(), line.size());
+    Lexer lexer(std::string_view(line.c_str(), line.size()));
 
     Parser parser(lexer);
 

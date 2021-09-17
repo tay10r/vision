@@ -6,198 +6,117 @@ using namespace vision;
 
 TEST(Lexer, ScanIdentifier)
 {
-  Lexer lexer;
+  Lexer lexer("some_identifier3 ");
 
-  lexer.Append("some_identifier3 ");
-
-  EXPECT_EQ(lexer.ScanIdentifier(), "some_identifier3");
+  EXPECT_EQ(lexer.Scan(), "some_identifier3");
 
   EXPECT_EQ(lexer.Remaining(), 1);
 }
 
 TEST(Lexer, ScanIdentifier2)
 {
-  Lexer lexer;
+  Lexer lexer("_some_identifier ");
 
-  lexer.Append("_some_identifier ");
-
-  EXPECT_EQ(lexer.ScanIdentifier(), "_some_identifier");
+  EXPECT_EQ(lexer.Scan(), "_some_identifier");
 
   EXPECT_EQ(lexer.Remaining(), 1);
 }
 
 TEST(Lexer, ScanIdentifier_Reject)
 {
-  Lexer lexer;
+  Lexer lexer("3_asdf");
 
-  lexer.Append("3_asdf");
+  EXPECT_NE(lexer.Scan(), TokenKind::ID);
 
-  EXPECT_EQ(lexer.ScanIdentifier(), "");
-
-  EXPECT_EQ(lexer.Remaining(), 6);
+  EXPECT_EQ(lexer.Remaining(), 5);
 }
 
 TEST(Lexer, ScanSpace)
 {
-  Lexer lexer;
+  Lexer lexer(" \ta");
 
-  lexer.Append(" \ta");
-
-  EXPECT_EQ(lexer.ScanSpace(), " \t");
+  EXPECT_EQ(lexer.Scan(), " \t");
 
   EXPECT_EQ(lexer.Remaining(), 1);
 }
 
 TEST(Lexer, ScanSpace2)
 {
-  Lexer lexer;
+  Lexer lexer("\t bb");
 
-  lexer.Append("\t bb");
-
-  EXPECT_EQ(lexer.ScanSpace(), "\t ");
+  EXPECT_EQ(lexer.Scan(), "\t ");
 
   EXPECT_EQ(lexer.Remaining(), 2);
 }
 
-TEST(Lexer, ScanSpaceReject)
-{
-  Lexer lexer;
-
-  lexer.Append("\n");
-
-  EXPECT_EQ(lexer.ScanSpace(), "");
-
-  EXPECT_EQ(lexer.Remaining(), 1);
-}
-
 TEST(Lexer, ScanNewline)
 {
-  Lexer lexer;
+  Lexer lexer("\n  ");
 
-  lexer.Append("\n  ");
-
-  EXPECT_EQ(lexer.ScanNewline(), "\n");
+  EXPECT_EQ(lexer.Scan(), "\n");
 
   EXPECT_EQ(lexer.Remaining(), 2);
 }
 
 TEST(Lexer, ScanNewline2)
 {
-  Lexer lexer;
+  Lexer lexer("\r\n  ");
 
-  lexer.Append("\r\n  ");
-
-  EXPECT_EQ(lexer.ScanNewline(), "\r\n");
+  EXPECT_EQ(lexer.Scan(), "\r\n");
 
   EXPECT_EQ(lexer.Remaining(), 2);
 }
 
 TEST(Lexer, ScanNewline3)
 {
-  Lexer lexer;
+  Lexer lexer("\r  ");
 
-  lexer.Append("\r  ");
-
-  EXPECT_EQ(lexer.ScanNewline(), "\r");
+  EXPECT_EQ(lexer.Scan(), "\r");
 
   EXPECT_EQ(lexer.Remaining(), 2);
 }
 
 TEST(Lexer, ScanNewline4)
 {
-  Lexer lexer;
+  Lexer lexer("\n\r\n  ");
 
-  lexer.Append("\n\r\n  ");
-
-  EXPECT_EQ(lexer.ScanNewline(), "\n");
+  EXPECT_EQ(lexer.Scan(), "\n");
 
   EXPECT_EQ(lexer.Remaining(), 4);
 }
 
-TEST(Lexer, ScanNewline_Reject)
-{
-  Lexer lexer;
-
-  lexer.Append(" \n");
-
-  EXPECT_EQ(lexer.ScanNewline(), "");
-
-  EXPECT_EQ(lexer.Remaining(), 2);
-}
-
-TEST(Lexer, ScanSymbol)
-{
-  Lexer lexer;
-
-  lexer.Append("( ");
-
-  EXPECT_EQ(lexer.ScanSymbol('('), "(");
-
-  EXPECT_EQ(lexer.Remaining(), 1);
-}
-
-TEST(Lexer, ScanSymbol2)
-{
-  Lexer lexer;
-
-  lexer.Append("= ");
-
-  EXPECT_EQ(lexer.ScanSymbol('='), "=");
-
-  EXPECT_EQ(lexer.Remaining(), 1);
-}
-
-TEST(Lexer, ScanSymbol_Reject)
-{
-  Lexer lexer;
-
-  lexer.Append("= ");
-
-  EXPECT_EQ(lexer.ScanSymbol('('), "");
-
-  EXPECT_EQ(lexer.Remaining(), 2);
-}
-
 TEST(Lexer, ScanInteger)
 {
-  Lexer lexer;
+  Lexer lexer("1234  ");
 
-  lexer.Append("1234  ");
-
-  EXPECT_EQ(lexer.ScanInteger(), "1234");
+  EXPECT_EQ(lexer.Scan(), "1234");
 
   EXPECT_EQ(lexer.Remaining(), 2);
 }
 
 TEST(Lexer, ScanInteger2)
 {
-  Lexer lexer;
+  Lexer lexer("-1234  \n");
 
-  lexer.Append("-1234  \n");
-
-  EXPECT_EQ(lexer.ScanInteger(), "-1234");
+  EXPECT_EQ(lexer.Scan(), "-1234");
 
   EXPECT_EQ(lexer.Remaining(), 3);
 }
 
 TEST(Lexer, ScanInteger_Reject)
 {
-  Lexer lexer;
+  Lexer lexer(";1234");
 
-  lexer.Append(";1234");
+  EXPECT_EQ(lexer.Scan(), TokenKind::Symbol);
 
-  EXPECT_EQ(lexer.ScanInteger(), "");
-
-  EXPECT_EQ(lexer.Remaining(), 5);
+  EXPECT_EQ(lexer.Remaining(), 4);
 }
 
 TEST(Lexer, ScanInteger_Reject2)
 {
-  Lexer lexer;
+  Lexer lexer("- 1234");
 
-  lexer.Append("- 1234");
+  EXPECT_EQ(lexer.Scan(), TokenKind::Symbol);
 
-  EXPECT_EQ(lexer.ScanInteger(), "");
-
-  EXPECT_EQ(lexer.Remaining(), 6);
+  EXPECT_EQ(lexer.Remaining(), 5);
 }

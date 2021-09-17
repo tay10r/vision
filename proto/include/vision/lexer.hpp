@@ -1,71 +1,51 @@
 #pragma once
 
-#include <vision/type_id.hpp>
+#include <vision/token.hpp>
 
-#include <map>
-#include <string>
+#include <optional>
 
 namespace vision {
-
-class SafeInput final
-{
-public:
-  SafeInput(size_t max_buffer_size = 1048576 /* 1 MiB */);
-
-  void Append(const char* text, size_t length);
-
-  void PopChars(size_t count);
-
-  auto Size() const noexcept -> size_t { return m_buffer.size(); }
-
-  auto operator[](size_t i) const noexcept -> char
-  {
-    return (i < m_buffer.size()) ? m_buffer[i] : 0;
-  }
-
-private:
-  std::string m_buffer;
-
-  size_t m_max_buffer_size;
-};
 
 class Lexer final
 {
 public:
-  Lexer();
+  Lexer(const std::string_view& input);
 
-  void Append(const char* text, size_t length) { m_input.Append(text, length); }
+  auto AtEnd() const noexcept -> bool;
 
-  void Append(const std::string& text)
-  {
-    m_input.Append(&text[0], text.size());
-  }
+  auto Remaining() const noexcept -> size_t;
 
-  auto ScanIdentifier() -> std::string;
-
-  auto ScanIdentifier(const std::string& expected) -> std::string;
-
-  auto ScanType() -> const TypeID*;
-
-  auto ScanSpace() -> std::string;
-
-  auto ScanNewline() -> std::string;
-
-  auto ScanSymbol(char c) -> std::string;
-
-  auto ScanInteger() -> std::string;
-
-  auto Remaining() const noexcept -> size_t { return m_input.Size(); }
+  auto Scan() -> std::optional<Token>;
 
 private:
-  auto PeekIdentifier() -> std::string;
+  auto ScanIdentifier() -> std::optional<Token>;
 
-  auto Produce(size_t length) -> std::string;
+  auto ScanIdentifier(const std::string_view& expected) -> std::optional<Token>;
+
+  auto ScanSpace() -> std::optional<Token>;
+
+  auto ScanNewline() -> std::optional<Token>;
+
+  auto ScanSymbol(char c) -> std::optional<Token>;
+
+  auto ScanInteger() -> std::optional<Token>;
+
+  auto PeekIdentifier() -> std::optional<std::string_view>;
+
+  auto Peek(size_t offset) const noexcept -> std::optional<char>;
+
+  auto Produce(TokenKind kind, size_t length) -> std::optional<Token>;
+
+  void Advance(size_t count);
 
 private:
-  SafeInput m_input;
+  std::string_view m_input;
 
-  std::map<std::string, TypeID> m_type_map;
+  size_t m_input_offset = 0;
+
+  size_t m_column = 1;
+
+  size_t m_line = 1;
 };
 
 } // namespace vision

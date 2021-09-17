@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace vision {
@@ -184,12 +185,12 @@ class Interpreter final
 public:
   Interpreter(std::ostream& out_stream, std::ostream& err_stream);
 
-  void SetFunc(const std::string& name, Function* func)
+  void SetFunc(const std::string_view& name, Function* func)
   {
-    m_func_map[name] = std::unique_ptr<Function>(func);
+    m_func_map[std::string(name)] = std::unique_ptr<Function>(func);
   }
 
-  auto FindFunc(const std::string& name) -> Function*
+  auto FindFunc(const std::string_view& name) -> Function*
   {
     auto it = m_func_map.find(name);
     if (it == m_func_map.end())
@@ -198,12 +199,12 @@ public:
       return it->second.get();
   }
 
-  void SetVar(const std::string& name, std::unique_ptr<Value>&& expr)
+  void SetVar(const std::string_view& name, std::unique_ptr<Value>&& expr)
   {
-    m_var_map[name] = std::move(expr);
+    m_var_map[std::string(name)] = std::move(expr);
   }
 
-  auto FindVar(const std::string& name) const -> const Value*
+  auto FindVar(const std::string_view& name) const -> const Value*
   {
     auto it = m_var_map.find(name);
     if (it == m_var_map.end())
@@ -215,9 +216,9 @@ public:
   bool Run(LineBuffer&);
 
 private:
-  std::map<std::string, std::unique_ptr<Function>> m_func_map;
+  std::map<std::string, std::unique_ptr<Function>, std::less<>> m_func_map;
 
-  std::map<std::string, std::unique_ptr<Value>> m_var_map;
+  std::map<std::string, std::unique_ptr<Value>, std::less<>> m_var_map;
 
   std::ostream& m_out_stream;
 

@@ -189,9 +189,7 @@ private:
 std::string
 ParseAndDumpAST(const std::string& input)
 {
-  Lexer lexer;
-
-  lexer.Append(input);
+  Lexer lexer(input);
 
   Parser parser(lexer);
 
