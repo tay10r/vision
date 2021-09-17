@@ -247,12 +247,30 @@ ViewPage::OnReadReady()
     return;
 
   buffer.resize(read_size);
+
+  if (m_read_state)
+    m_read_state->Read(buffer);
 }
 
 bool
 ViewPage::HasClient() const noexcept
 {
   return !!m_client;
+}
+
+//=========================//
+// Read States (View Page) //
+//=========================//
+
+void
+ReadFrameState::Read(const std::vector<char>&)
+{}
+
+void
+ReadRejectState::Read(const std::vector<char>& buffer)
+{
+  m_view_page.GetLog() << "Ignoring " << int(buffer.size())
+                       << " bytes of data.\n";
 }
 
 //============//

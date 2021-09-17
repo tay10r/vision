@@ -71,11 +71,21 @@ public:
   Log& operator<<(int n);
 };
 
+class ReadState
+{
+public:
+  virtual ~ReadState() = default;
+
+  virtual void Read(const std::vector<char>&) = 0;
+};
+
 class ViewPage : public QWidget
 {
   Q_OBJECT
 public:
   ViewPage(QWidget* parent);
+
+  auto GetLog() -> Log& { return m_log; }
 
   bool HasClient() const noexcept;
 
@@ -103,7 +113,35 @@ private:
 
   std::unique_ptr<RenderClient> m_client;
 
+  std::unique_ptr<ReadState> m_read_state;
+
   qint64 m_max_read_size = 1024 * 1024;
+};
+
+class ReadFrameState final : public ReadState
+{
+public:
+  ReadFrameState(ViewPage& view_page)
+    : m_view_page(view_page)
+  {}
+
+  void Read(const std::vector<char>&) override;
+
+private:
+  ViewPage& m_view_page;
+};
+
+class ReadRejectState final : public ReadState
+{
+public:
+  ReadRejectState(ViewPage& view_page)
+    : m_view_page(view_page)
+  {}
+
+  void Read(const std::vector<char>&) override;
+
+private:
+  ViewPage& m_view_page;
 };
 
 class MainWindow : public QMainWindow
