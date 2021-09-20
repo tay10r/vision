@@ -197,6 +197,8 @@ public:
 
     m_render_replies.emplace_back(new RenderReply(req, std::move(data)));
 
+    m_render_reply_index++;
+
     const int next_partition_index = CheckAvailablePartitionIndex();
 
     if (next_partition_index > m_partition_index) {
@@ -335,8 +337,6 @@ private:
 
         req.unique_id = id_gen.Generate();
 
-        req.partition_index = i;
-
         req.x_pixel_count = m_partition_width;
         req.y_pixel_count = m_partition_height;
 
@@ -450,8 +450,11 @@ public:
 
     makeCurrent();
 
-    if (m_frame_build_context->ReplyRenderRequest(req, std::move(data)))
-      update();
+    if (m_frame_build_context->ReplyRenderRequest(req, std::move(data))) {
+      //
+    }
+
+    update();
 
     doneCurrent();
   }

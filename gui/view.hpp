@@ -4,26 +4,9 @@
 
 #include <vector>
 
+#include "schedule.hpp"
+
 namespace vision::gui {
-
-struct RenderRequest final
-{
-  int unique_id = 0;
-
-  int partition_index = 0;
-
-  int x_pixel_count = 0;
-  int y_pixel_count = 0;
-
-  int x_pixel_offset = 0;
-  int y_pixel_offset = 0;
-
-  int x_pixel_stride = 0;
-  int y_pixel_stride = 0;
-
-  int x_frame_size = 0;
-  int y_frame_size = 0;
-};
 
 class View : public QOpenGLWidget
 {

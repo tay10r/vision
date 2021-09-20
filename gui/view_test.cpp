@@ -52,7 +52,7 @@ HandleRenderRequest(const vision::gui::RenderRequest& req)
 
       rgb[0] = u * 255;
       rgb[1] = v * 255;
-      rgb[2] = 1;
+      rgb[2] = 255;
     }
   }
 
@@ -85,7 +85,7 @@ main(int argc, char** argv)
 
   main_window.setCentralWidget(view);
 
-  view->SetPartitionLevel(4);
+  view->SetPartitionLevel(8);
 
   QTimer timer(&main_window);
 
@@ -105,7 +105,7 @@ main(int argc, char** argv)
     view->ReplyRenderRequest(req, std::move(buf));
   });
 
-  timer.start(1000);
+  timer.start(50);
 
   return app.exec();
 }
