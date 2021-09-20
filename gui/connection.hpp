@@ -9,6 +9,9 @@ class ConnectionObserver
 public:
   virtual ~ConnectionObserver() = default;
 
+  /// Called when a connection is established.
+  virtual void OnConnectionStart() = 0;
+
   /// Called whenever data is received from the connection.
   ///
   /// @param data A pointer to the beginning of the data.

@@ -19,6 +19,8 @@ public:
     : m_observer(o)
   {
     std::cout << "Debug connection instanced." << std::endl;
+
+    m_observer.OnConnectionStart();
   }
 
   void Render(size_t w,

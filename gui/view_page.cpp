@@ -4,6 +4,7 @@
 #include "connection.hpp"
 #include "controller.hpp"
 #include "monitor.hpp"
+#include "schedule.hpp"
 #include "view.hpp"
 
 #include <QVBoxLayout>
@@ -41,6 +42,18 @@ private:
     m_monitor->setVisible(visible);
   }
 
+  void OnConnectionStart() override
+  {
+    const RenderRequest req = m_view->GetCurrentRenderRequest();
+
+    m_connection->Render(req.x_pixel_count,
+                         req.y_pixel_count,
+                         req.x_pixel_offset,
+                         req.y_pixel_offset,
+                         req.x_pixel_stride,
+                         req.y_pixel_stride);
+  }
+
   void OnConnectionRecv(const unsigned char*, size_t) override
   {
     //
@@ -49,7 +62,7 @@ private:
 private:
   QWidget* m_address_bar{ CreateAddressBar(this, *this) };
 
-  QWidget* m_view{ CreateView(this) };
+  View* m_view{ CreateView(this) };
 
   Monitor* m_monitor{ CreateMonitor(this) };
 

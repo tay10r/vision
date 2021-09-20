@@ -108,7 +108,7 @@ main(int argc, char** argv)
 
   main_window.setCentralWidget(view);
 
-  view->SetDivisionLevel(4);
+  view->SetDivisionLevel(2);
 
   QTimer timer(&main_window);
 

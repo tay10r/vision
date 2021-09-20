@@ -29,36 +29,41 @@ const char* vertSrc = R"(
 
 layout(location = 0) in vec4 vertex;
 
-uniform float u_partition_size = 0.0;
-uniform float v_partition_size = 0.0;
+uniform float x_partition_size = 0.0;
+uniform float y_partition_size = 0.0;
 
-uniform float u_pixel_offset = 0.0;
-uniform float v_pixel_offset = 0.0;
+uniform float x_pixel_offset = 0.0;
+uniform float y_pixel_offset = 0.0;
 
-uniform float u_pixel_stride = 1.0;
-uniform float v_pixel_stride = 1.0;
+uniform float x_pixel_stride = 1.0;
+uniform float y_pixel_stride = 1.0;
 
 out vec2 tex_coords;
 
 void
 main()
 {
-  float x_max = u_partition_size * u_pixel_stride;
-  float y_max = v_partition_size * v_pixel_stride;
+  float x_max = x_partition_size * x_pixel_stride;
+  float y_max = y_partition_size * y_pixel_stride;
 
-  vec2 offset = vec2(0, 0);
+  vec2 offset = vec2(0.0, 0.0);
 
-  offset += vec2(vertex.x * u_partition_size * u_pixel_stride, vertex.y * v_partition_size * v_pixel_stride);
+  offset += vec2(vertex.x * x_partition_size * x_pixel_stride,
+                 vertex.y * y_partition_size * y_pixel_stride);
 
-  offset += vec2(vertex.z * u_partition_size, vertex.w * v_partition_size);
+  offset += vec2(vertex.z * x_partition_size,
+                 vertex.w * y_partition_size);
 
-  offset += vec2(u_pixel_offset, v_pixel_offset);
+  offset += vec2(x_pixel_offset, y_pixel_offset);
 
   tex_coords = vertex.xy;
 
-  vec2 position = vec2(offset.x / x_max, offset.y / y_max);
+  vec2 position = vec2(offset.x / x_max,
+                       offset.y / y_max);
 
-  gl_Position = vec4((position * 2.0) - 1.0, 0.0, 1.0);
+  float ndc_x = (position.x * 2.0) - 1.0;
+  float ndc_y = 1.0 - (position.y * 2.0);
+  gl_Position = vec4(ndc_x, ndc_y, 0.0, 1.0);
 }
 )";
 
@@ -69,7 +74,7 @@ out vec4 color;
 
 uniform sampler2D partition;
 
-varying vec2 tex_coords;
+in vec2 tex_coords;
 
 void
 main()
@@ -89,7 +94,9 @@ struct RenderReply final
                      req.x_pixel_count * 3,
                      QImage::Format_RGB888),
               QOpenGLTexture::DontGenerateMipMaps)
-  {}
+  {
+    texture.setMinMagFilters(QOpenGLTexture::Linear, QOpenGLTexture::Nearest);
+  }
 };
 
 class FrameBuildContext final
@@ -261,8 +268,8 @@ protected:
     const size_t partition_w = schedule.GetPartitionWidth();
     const size_t partition_h = schedule.GetPartitionHeight();
 
-    m_program.setUniformValue("u_partition_size", float(partition_w));
-    m_program.setUniformValue("v_partition_size", float(partition_h));
+    m_program.setUniformValue("x_partition_size", float(partition_w));
+    m_program.setUniformValue("y_partition_size", float(partition_h));
 
     for (size_t i = 0; i < preview_operations.size(); i++) {
 
@@ -272,11 +279,11 @@ protected:
 
       const PreviewOperation& op = preview_operations.at(i);
 
-      m_program.setUniformValue("u_pixel_offset", float(op.x_pixel_offset));
-      m_program.setUniformValue("v_pixel_offset", float(op.y_pixel_offset));
+      m_program.setUniformValue("x_pixel_offset", float(op.x_pixel_offset));
+      m_program.setUniformValue("y_pixel_offset", float(op.y_pixel_offset));
 
-      m_program.setUniformValue("u_pixel_stride", float(op.x_pixel_stride));
-      m_program.setUniformValue("v_pixel_stride", float(op.y_pixel_stride));
+      m_program.setUniformValue("x_pixel_stride", float(op.x_pixel_stride));
+      m_program.setUniformValue("y_pixel_stride", float(op.y_pixel_stride));
 
       const int v_count = m_frame_build_context->GetVertexCount();
 
