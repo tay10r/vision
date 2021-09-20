@@ -63,28 +63,56 @@ TEST(Schedule, GetTextureSize6)
   EXPECT_EQ(schedule.GetTextureHeight(), 16);
 }
 
+namespace {
+
+std::string
+Print(const std::vector<Vertex>& vertices)
+{
+  std::ostringstream stream;
+
+  for (const auto& vert : vertices)
+    stream << vert << '\n';
+
+  return stream.str();
+}
+
+} // namespace
+
 TEST(Schedule, GetVertexBuffer)
 {
-  static_assert(sizeof(Vertex) == (sizeof(float) * 2));
+  static_assert(sizeof(Vertex) == (sizeof(float) * 4));
 
-  Schedule schedule(3, 5, 0);
+  Schedule schedule(2, 2, 0);
 
   std::vector<Vertex> vertices = schedule.GetVertexBuffer();
 
-  const Vertex p00(0.0f, 0.0f);
-  const Vertex p10(1.0f / 3.0f, 0.0f);
-  const Vertex p01(0.0f, 1.0f / 5.0f);
-  const Vertex p11(1.0f / 3.0f, 1.0f / 5.0f);
+  std::string out = Print(vertices);
 
-  EXPECT_EQ(vertices.size(), 90);
-
-  EXPECT_EQ(vertices[0], p00);
-  EXPECT_EQ(vertices[1], p01);
-  EXPECT_EQ(vertices[2], p10);
-
-  EXPECT_EQ(vertices[3], p01);
-  EXPECT_EQ(vertices[4], p11);
-  EXPECT_EQ(vertices[5], p10);
+  EXPECT_EQ(out,
+            "(0, 0)\n"
+            "(0, 0.5)\n"
+            "(0.5, 0)\n"
+            "(0, 0.5)\n"
+            "(0.5, 0.5)\n"
+            "(0.5, 0)\n"
+            "(0.5, 0)\n"
+            "(0.5, 0.5)\n"
+            "(1, 0)\n"
+            "(0.5, 0.5)\n"
+            "(1, 0.5)\n"
+            "(1, 0)\n"
+            "(0, 0.5)\n"
+            "(0, 1)\n"
+            "(0.5, 0.5)\n"
+            "(0, 1)\n"
+            "(0.5, 1)\n"
+            "(0.5, 0.5)\n"
+            "(0.5, 0.5)\n"
+            "(0.5, 1)\n"
+            "(1, 0.5)\n"
+            "(0.5, 1)\n"
+            "(1, 1)\n"
+            "(1, 0.5)\n");
 }
 
 TEST(Schedule, GetStride)
@@ -226,6 +254,7 @@ Print(const std::vector<PreviewOperation>& ops)
 
   return stream.str();
 }
+
 } // namespace
 
 TEST(Schedule, GetPreviewOperations)
@@ -252,6 +281,19 @@ TEST(Schedule, GetPreviewOperations3)
 {
   Schedule schedule(16, 8, 2);
 
+  schedule.NextRenderRequest();
+  schedule.NextRenderRequest();
+
+  std::string out = Print(schedule.GetPreviewOperations());
+
+  EXPECT_EQ(out, "offset = (0, 0); stride = (1, 1)\n");
+}
+
+TEST(Schedule, GetPreviewOperations3b)
+{
+  Schedule schedule(16, 8, 2);
+
+  schedule.NextRenderRequest();
   schedule.NextRenderRequest();
   schedule.NextRenderRequest();
 

@@ -2,7 +2,9 @@
 #include <QMainWindow>
 #include <QSurfaceFormat>
 #include <QTimer>
+#include <QVector2D>
 
+#include "schedule.hpp"
 #include "view.hpp"
 
 #include <iostream>
@@ -31,10 +33,29 @@ PrintRenderRequest(const vision::gui::RenderRequest& req,
   }
 }
 
+struct Circle final
+{
+  float u;
+  float v;
+  float r;
+
+  bool Contains(float other_u, float other_v) const
+  {
+    float a = u - other_u;
+    float b = v - other_v;
+    return ((a * a) + (b * b)) < (r * r);
+  }
+};
+
 std::vector<unsigned char>
 HandleRenderRequest(const vision::gui::RenderRequest& req)
 {
   std::vector<unsigned char> buffer(req.x_pixel_count * req.y_pixel_count * 3);
+
+  float u_scale = 1.0f / req.x_frame_size;
+  float v_scale = 1.0f / req.y_frame_size;
+
+  const Circle circle{ 0.5, 0.5, 0.1 };
 
   for (int y = 0; y < req.y_pixel_count; y++) {
 
@@ -46,13 +67,15 @@ HandleRenderRequest(const vision::gui::RenderRequest& req)
       float u = (xx + 0.5f) / req.x_frame_size;
       float v = (yy + 0.5f) / req.y_frame_size;
 
+      float k = circle.Contains(u, v) ? 1 : 0;
+
       int i = (y * req.x_pixel_count) + x;
 
       unsigned char* rgb = &buffer[i * 3];
 
-      rgb[0] = u * 255;
-      rgb[1] = v * 255;
-      rgb[2] = 255;
+      rgb[0] = u * k * 255;
+      rgb[1] = v * k * 255;
+      rgb[2] = k * 255;
     }
   }
 
@@ -85,24 +108,21 @@ main(int argc, char** argv)
 
   main_window.setCentralWidget(view);
 
-  view->SetPartitionLevel(8);
+  view->SetDivisionLevel(4);
 
   QTimer timer(&main_window);
 
   QObject::connect(&timer, &QTimer::timeout, [&timer, view] {
-    const vision::gui::RenderRequest* req = view->PopRenderRequest();
+    const vision::gui::RenderRequest req = view->GetCurrentRenderRequest();
 
-    if (!req) {
-      std::cout << "Rendering done." << std::endl;
-      timer.stop();
+    if (!req.IsValid())
       return;
-    }
 
-    PrintRenderRequest(*req);
+    PrintRenderRequest(req);
 
-    std::vector<unsigned char> buf = HandleRenderRequest(*req);
+    std::vector<unsigned char> buf = HandleRenderRequest(req);
 
-    view->ReplyRenderRequest(req, std::move(buf));
+    view->ReplyRenderRequest(req, buf.data());
   });
 
   timer.start(50);

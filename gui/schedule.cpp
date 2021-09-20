@@ -35,15 +35,12 @@ ReverseInterleaveY(uint64_t n)
 }
 
 inline size_t
-Log2(size_t n)
+Log4(size_t n)
 {
-  if (n == 0)
-    return 1;
-
   size_t out = 0;
 
-  while (n > 1) {
-    n >>= 1;
+  while (n > 3) {
+    n >>= 2;
     out++;
   }
 
@@ -57,8 +54,6 @@ Schedule::Schedule(size_t w, size_t h, size_t division_level)
   , m_height(h)
   , m_division_level(division_level)
 {
-  const size_t count = m_division_level * m_division_level;
-
   const size_t x_pixel_count = GetTextureWidth() / GetDivisionsPerDimension();
   const size_t y_pixel_count = GetTextureHeight() / GetDivisionsPerDimension();
 
@@ -125,10 +120,28 @@ Schedule::GetPartitionCount() const noexcept
   return divs * divs;
 }
 
+size_t
+Schedule::GetPartitionWidth() const noexcept
+{
+  return GetTextureWidth() / GetDivisionsPerDimension();
+}
+
+size_t
+Schedule::GetPartitionHeight() const noexcept
+{
+  return GetTextureHeight() / GetDivisionsPerDimension();
+}
+
 bool
 Schedule::HasPreview() const noexcept
 {
   return m_render_request_index > 0;
+}
+
+size_t
+Schedule::GetPreviewIndex() const noexcept
+{
+  return Log4(m_render_request_index);
 }
 
 std::vector<PreviewOperation>
@@ -139,7 +152,7 @@ Schedule::GetPreviewOperations() const
   if (!HasPreview())
     return operations;
 
-  const size_t div_count = GetPreviewIndex();
+  const size_t div_count = 1 << GetPreviewIndex();
 
   const size_t j_max = div_count * div_count;
 
@@ -169,12 +182,6 @@ Schedule::GetPreviewOperations() const
   }
 
   return operations;
-}
-
-size_t
-Schedule::GetPreviewIndex() const noexcept
-{
-  return Log2(m_render_request_index + 1);
 }
 
 size_t
@@ -221,24 +228,36 @@ Schedule::GetDivisionsPerDimension() const noexcept
 std::vector<Vertex>
 Schedule::GetVertexBuffer() const
 {
-  const size_t tex_w = GetTextureWidth();
-  const size_t tex_h = GetTextureHeight();
+  const size_t partition_w = GetPartitionWidth();
+  const size_t partition_h = GetPartitionHeight();
 
-  const float x_scale = 1.0f / tex_w;
-  const float y_scale = 1.0f / tex_h;
+  const float x_scale = 1.0f / partition_w;
+  const float y_scale = 1.0f / partition_h;
 
-  std::vector<Vertex> vertices(tex_w * tex_h * 6);
+  std::vector<Vertex> vertices(partition_w * partition_h * 6);
 
-  for (size_t y = 0; y < tex_h; y++) {
+  for (size_t y = 0; y < partition_h; y++) {
 
-    for (size_t x = 0; x < tex_w; x++) {
+    for (size_t x = 0; x < partition_w; x++) {
 
-      const Vertex p00((x + 0) * x_scale, (y + 0) * y_scale);
-      const Vertex p10((x + 1) * x_scale, (y + 0) * y_scale);
-      const Vertex p01((x + 0) * x_scale, (y + 1) * y_scale);
-      const Vertex p11((x + 1) * x_scale, (y + 1) * y_scale);
+      const float x0 = (x + 0) * x_scale;
+      const float y0 = (y + 0) * y_scale;
 
-      size_t i = ((y * tex_w) + x) * 6;
+      const float x1 = (x + 1) * x_scale;
+      const float y1 = (y + 1) * y_scale;
+
+      const float dx0 = 0.0f;
+      const float dy0 = 0.0f;
+
+      const float dx1 = x1 - x0;
+      const float dy1 = y1 - y0;
+
+      const Vertex p00(x0, y0, dx0, dy0);
+      const Vertex p10(x0, y0, dx1, dy0);
+      const Vertex p01(x0, y0, dx0, dy1);
+      const Vertex p11(x0, y0, dx1, dy1);
+
+      size_t i = ((y * partition_w) + x) * 6;
 
       vertices[i + 0] = p00;
       vertices[i + 1] = p01;

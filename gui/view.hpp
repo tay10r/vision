@@ -4,9 +4,11 @@
 
 #include <vector>
 
-#include "schedule.hpp"
+#include <stddef.h>
 
 namespace vision::gui {
+
+struct RenderRequest;
 
 class View : public QOpenGLWidget
 {
@@ -17,11 +19,10 @@ public:
 
   virtual ~View() = default;
 
-  /// Handles a render request made by the view.
+  /// Gets the current render request made by the view.
   ///
-  /// @return A pointer to the render request. If the view is already fully
-  ///         rendered, then this function returns a null pointer.
-  virtual const RenderRequest* PopRenderRequest() = 0;
+  /// @return The current render request.
+  virtual RenderRequest GetCurrentRenderRequest() const = 0;
 
   /// Responds to a render request with the resultant RGB buffer.
   ///
@@ -29,12 +30,12 @@ public:
   ///
   /// @param buffer The buffer containing the 24-bit RGB buffer. Should fit all
   ///               24-bit RGB values requested.
-  virtual void ReplyRenderRequest(const RenderRequest* req,
-                                  std::vector<unsigned char>&& buffer) = 0;
+  virtual void ReplyRenderRequest(const RenderRequest& req,
+                                  const unsigned char* data) = 0;
 
   virtual void NewFrame() = 0;
 
-  virtual void SetPartitionLevel(int level) = 0;
+  virtual void SetDivisionLevel(size_t level) = 0;
 
   /// Indicates whether or not the view needs to go through the rendering
   /// process again. This can return true if the partition level is changed or

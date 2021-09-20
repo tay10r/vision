@@ -62,9 +62,17 @@ public:
 
   size_t GetPreviewCount() const noexcept;
 
+  size_t GetPartitionWidth() const noexcept;
+
+  size_t GetPartitionHeight() const noexcept;
+
   size_t GetTextureWidth() const noexcept;
 
   size_t GetTextureHeight() const noexcept;
+
+  size_t GetFrameWidth() const noexcept { return m_width; }
+
+  size_t GetFrameHeight() const noexcept { return m_height; }
 
   size_t GetVerticalStride() const noexcept;
 

@@ -25,7 +25,13 @@ add_library(vision_gui SHARED
   vertex.cpp
   ${controller_sources})
 
+target_compile_features(vision_gui PUBLIC cxx_std_17)
+
 target_link_libraries(vision_gui PUBLIC Qt5::Widgets Qt5::Network Qt5::Charts)
+
+if(NOT MSVC)
+  target_compile_options(vision_gui PRIVATE -Wall -Wextra -Werror -Wfatal-errors)
+endif(NOT MSVC)
 
 add_library(vision::gui ALIAS vision_gui)
 
