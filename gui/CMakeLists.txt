@@ -21,8 +21,14 @@ add_library(vision_gui SHARED
   schedule.cpp
   monitor.hpp
   monitor.cpp
+  response.hpp
+  response.cpp
   vertex.hpp
   vertex.cpp
+  lexer.hpp
+  lexer.cpp
+  token.hpp
+  token.cpp
   ${controller_sources})
 
 target_compile_features(vision_gui PUBLIC cxx_std_17)
@@ -54,7 +60,9 @@ if(VISION_TESTS)
   find_package(GTest REQUIRED)
 
   add_executable(vision_gui_tests
-    schedule_tests.cpp)
+    response_tests.cpp
+    schedule_tests.cpp
+    lexer_tests.cpp)
 
   target_link_libraries(vision_gui_tests
     PUBLIC
