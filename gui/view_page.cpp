@@ -20,6 +20,7 @@ class ViewPage final
   , public AddressBarObserver
   , public ConnectionObserver
   , public ResponseObserver
+  , public ViewObserver
 {
 public:
   ViewPage(QWidget* parent, Controller& controller)
@@ -36,6 +37,16 @@ public:
   }
 
 private:
+  void OnViewResize() override
+  {
+    if (!m_connection)
+      return;
+
+    IssueResize();
+
+    IssueRenderRequest();
+  }
+
   void OnConnectionRequest(const QString& url) override
   {
     m_connection = m_controller.CreateConnection(url, *this);
@@ -53,15 +64,26 @@ private:
   {
     m_response_parser = ResponseParser::Create(*this);
 
-    const QSize view_size = m_view->size();
-
-    m_connection->Resize(view_size.width(), view_size.height());
+    IssueResize();
 
     IssueRenderRequest();
   }
 
+  void IssueResize()
+  {
+    const QSize view_size = m_view->size();
+
+    m_connection->Resize(view_size.width(), view_size.height());
+  }
+
   void IssueRenderRequest()
   {
+    if (!m_connection) {
+      m_monitor->LogError(
+        "Render request was issued but there is no connection to send it to.");
+      return;
+    }
+
     const RenderRequest req = m_view->GetCurrentRenderRequest();
 
     if (!req.IsValid()) {
@@ -99,8 +121,12 @@ private:
   void OnRGBBuffer(const unsigned char* buffer, size_t w, size_t h) override
   {
     if (!m_view->ReplyRenderRequest(buffer, w * h * 3)) {
+      // This can happen when the window has been resized since the render
+      // request was issued. It should not be considered an error.
+#if 0
       m_monitor->LogError("Failed to reply to render request.");
       DisconnectDueToError();
+#endif
     }
 
     if (m_view->HasRenderRequest())
@@ -117,7 +143,7 @@ private:
 private:
   QWidget* m_address_bar{ CreateAddressBar(this, *this) };
 
-  View* m_view{ CreateView(this) };
+  View* m_view{ CreateView(*this, this) };
 
   Monitor* m_monitor{ CreateMonitor(this) };
 

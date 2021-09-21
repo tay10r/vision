@@ -10,11 +10,20 @@ namespace vision::gui {
 
 struct RenderRequest;
 
+class ViewObserver
+{
+public:
+  virtual ~ViewObserver() = default;
+
+  virtual void OnViewResize() = 0;
+};
+
 class View : public QOpenGLWidget
 {
 public:
-  View(QWidget* parent)
+  View(ViewObserver& observer, QWidget* parent)
     : QOpenGLWidget(parent)
+    , m_observer(observer)
   {}
 
   virtual ~View() = default;
@@ -44,9 +53,15 @@ public:
   /// process again. This can return true if the partition level is changed or
   /// if the window is resized.
   virtual bool NeedsNewFrame() = 0;
+
+protected:
+  void NotifyResize();
+
+private:
+  ViewObserver& m_observer;
 };
 
 View*
-CreateView(QWidget* parent);
+CreateView(ViewObserver& observer, QWidget* parent);
 
 } // namespace vision::gui

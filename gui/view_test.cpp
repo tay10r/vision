@@ -82,6 +82,12 @@ HandleRenderRequest(const vision::gui::RenderRequest& req)
   return buffer;
 }
 
+class ViewObserver final : public vision::gui::ViewObserver
+{
+public:
+  void OnViewResize() override {}
+};
+
 } // namespace
 
 int
@@ -104,7 +110,10 @@ main(int argc, char** argv)
 
   main_window.show();
 
-  vision::gui::View* view = vision::gui::CreateView(&main_window);
+  ViewObserver view_observer;
+
+  vision::gui::View* view =
+    vision::gui::CreateView(view_observer, &main_window);
 
   main_window.setCentralWidget(view);
 

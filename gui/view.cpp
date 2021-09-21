@@ -171,8 +171,8 @@ private:
 class ViewImpl : public View
 {
 public:
-  ViewImpl(QWidget* parent)
-    : View(parent)
+  ViewImpl(ViewObserver& observer, QWidget* parent)
+    : View(observer, parent)
   {
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
@@ -313,6 +313,8 @@ protected:
 
     m_frame_build_context.reset(
       new FrameBuildContext(QSize(w, h), m_div_level));
+
+    NotifyResize();
   }
 
 private:
@@ -320,15 +322,21 @@ private:
 
   QOpenGLShaderProgram m_program;
 
-  size_t m_div_level = 4;
+  size_t m_div_level = 2;
 };
 
 } // namespace
 
 View*
-CreateView(QWidget* parent)
+CreateView(ViewObserver& observer, QWidget* parent)
 {
-  return new ViewImpl(parent);
+  return new ViewImpl(observer, parent);
+}
+
+void
+View::NotifyResize()
+{
+  m_observer.OnViewResize();
 }
 
 } // namespace vision::gui
