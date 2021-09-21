@@ -4,6 +4,8 @@
 
 namespace vision::gui {
 
+struct RenderRequest;
+
 class ConnectionObserver
 {
 public:
@@ -29,12 +31,7 @@ public:
 
   virtual void Resize(size_t w, size_t h) = 0;
 
-  virtual void Render(size_t w,
-                      size_t h,
-                      size_t x_offset,
-                      size_t y_offset,
-                      size_t x_stride,
-                      size_t y_stride) = 0;
+  virtual void Render(const RenderRequest&) = 0;
 };
 
 } // namespace vision::gui

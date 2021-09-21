@@ -31,12 +31,14 @@ main(int argc, char** argv)
 {
   QApplication app(argc, argv);
 
+#if 0
   QSurfaceFormat format;
   format.setDepthBufferSize(24);
   format.setStencilBufferSize(8);
   format.setVersion(3, 2);
   format.setProfile(QSurfaceFormat::CoreProfile);
   QSurfaceFormat::setDefaultFormat(format);
+#endif
 
   std::unique_ptr<vision::gui::Controller> controller =
     vision::gui::Controller::Create();

@@ -80,8 +80,7 @@ Schedule::Schedule(size_t w, size_t h, size_t division_level)
       const size_t x_cnt = (div_count > 1) ? x_pixel_count - 1 : x_pixel_count;
       const size_t y_cnt = (div_count > 1) ? y_pixel_count - 1 : y_pixel_count;
 
-      const RenderRequest req{ 0 /* unique ID */,
-                               x_cnt,
+      const RenderRequest req{ x_cnt,
                                y_cnt,
                                ReverseInterleaveX(j),
                                ReverseInterleaveY(j),

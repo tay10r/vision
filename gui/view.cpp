@@ -10,15 +10,11 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
 
-#include <QDebug>
-
 #include <map>
 #include <optional>
 
 #include <assert.h>
 #include <stdint.h>
-
-#include <iostream>
 
 namespace vision::gui {
 
@@ -131,8 +127,6 @@ public:
     if (m_render_replies.size() >= m_schedule.GetRenderRequestCount())
       return false;
 
-    std::cout << "Added render reply" << std::endl;
-
     m_render_replies.emplace_back(new RenderReply(req, data));
 
     const std::optional<size_t> m_last_preview_index = m_preview_index;
@@ -187,6 +181,16 @@ public:
 
   ~ViewImpl() { makeCurrent(); }
 
+  bool HasRenderRequest() const override
+  {
+    if (!m_frame_build_context)
+      return false;
+
+    const Schedule& schedule = m_frame_build_context->GetSchedule();
+
+    return schedule.GetRemainingRenderRequests();
+  }
+
   void SetDivisionLevel(size_t level) override
   {
     level = std::max(level, size_t(0));
@@ -213,15 +217,25 @@ public:
       return m_frame_build_context->GetRenderRequest();
   }
 
-  void ReplyRenderRequest(const RenderRequest& req,
-                          const unsigned char* data) override
+  bool ReplyRenderRequest(const unsigned char* data, size_t size) override
   {
     makeCurrent();
+
+    const RenderRequest req = GetCurrentRenderRequest();
+    if (!req.IsValid())
+      return false;
+
+    size_t req_size = req.x_pixel_count * req.y_pixel_count * 3;
+
+    if (req_size != size)
+      return false;
 
     if (m_frame_build_context->ReplyRenderRequest(req, data))
       update();
 
     doneCurrent();
+
+    return true;
   }
 
 protected:
@@ -291,8 +305,6 @@ protected:
     }
 
     m_program.disableAttributeArray(vertex_attrib);
-
-    qDebug() << "Frame rendered.";
   }
 
   void resizeGL(int w, int h) override

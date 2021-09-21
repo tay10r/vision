@@ -2,9 +2,11 @@
 
 #include "connection.hpp"
 #include "controller.hpp"
+#include "render_request.hpp"
 
 #include <iostream>
 #include <random>
+#include <sstream>
 #include <vector>
 
 #include <QObject>
@@ -15,7 +17,24 @@ namespace vision::gui {
 
 namespace {
 
-class DebugConnection final : public Connection
+struct Circle final
+{
+  float u;
+  float v;
+  float r;
+
+  bool Contains(float other_u, float other_v) const noexcept
+  {
+    const float a = (u - other_u);
+    const float b = (v - other_v);
+
+    return ((a * a) + (b * b)) < (r * r);
+  }
+};
+
+class DebugConnection final
+  : public Connection
+  , public QObject
 {
 public:
   DebugConnection(ConnectionObserver& o)
@@ -31,40 +50,88 @@ public:
     return true;
   }
 
-  void Render(size_t w,
-              size_t h,
-              size_t x_offset,
-              size_t y_offset,
-              size_t x_stride,
-              size_t y_stride) override
+  void Render(const RenderRequest& req) override
   {
-    std::vector<unsigned char> buffer(w * h * 3);
+    m_render_requests.emplace_back(req);
 
-    (void)w;
-    (void)h;
-    (void)x_offset;
-    (void)y_offset;
-    (void)x_stride;
-    (void)y_stride;
-
-    m_observer.OnConnectionRecv(&buffer[0], buffer.size());
+    QTimer::singleShot(10, this, &DebugConnection::HandleFirstRenderRequest);
   }
 
   void Resize(size_t w, size_t h) override
   {
-    m_width = w;
-
-    m_height = h;
-
+    m_width = std::max(w, size_t(1));
+    m_height = std::max(h, size_t(1));
     std::cout << "Resizing to (" << w << ", " << h << ")" << std::endl;
   }
 
+protected slots:
+  void HandleFirstRenderRequest()
+  {
+    if (m_render_requests.empty())
+      return;
+
+    HandleRenderRequest(m_render_requests[0]);
+
+    m_render_requests.erase(m_render_requests.begin());
+  }
+
 private:
+  void HandleRenderRequest(const RenderRequest& req)
+  {
+    std::uniform_real_distribution<float> color_dist(0.0f, 1.0f);
+
+    const float color[3]{ color_dist(m_rng),
+                          color_dist(m_rng),
+                          color_dist(m_rng) };
+
+    std::vector<unsigned char> buffer(req.x_pixel_count * req.y_pixel_count *
+                                      3);
+
+    const float x_scale = 1.0f / m_width;
+    const float y_scale = 1.0f / m_height;
+
+    Circle circle{ 0.5, 0.5, 0.3 };
+
+    for (size_t y = 0; y < req.y_pixel_count; y++) {
+
+      for (size_t x = 0; x < req.x_pixel_count; x++) {
+
+        const float u = (req.GetFrameX(x) + 0.5f) * x_scale;
+        const float v = (req.GetFrameY(y) + 0.5f) * y_scale;
+
+        const float k = circle.Contains(u, v) ? 1.0f : 0.0f;
+
+        size_t buffer_offset = ((y * req.x_pixel_count) + x) * 3;
+
+        buffer[buffer_offset + 0] = color[0] * k * 255;
+        buffer[buffer_offset + 1] = color[1] * k * 255;
+        buffer[buffer_offset + 2] = color[2] * k * 255;
+      }
+    }
+
+    std::ostringstream header_stream;
+
+    header_stream << "rgb buffer " << req.x_pixel_count << ' '
+                  << req.y_pixel_count << '\n';
+
+    std::string header = header_stream.str();
+
+    m_observer.OnConnectionRecv((const unsigned char*)&header[0],
+                                header.size());
+
+    m_observer.OnConnectionRecv(&buffer[0], buffer.size());
+  }
+
+private:
+  std::vector<RenderRequest> m_render_requests;
+
   ConnectionObserver& m_observer;
 
-  size_t m_width = 0;
+  std::mt19937 m_rng{ 1234 };
 
-  size_t m_height = 0;
+  size_t m_width = 1;
+
+  size_t m_height = 1;
 };
 
 class BadConnection final : public Connection
@@ -74,7 +141,7 @@ public:
 
   bool Connect() override { return false; }
 
-  void Render(size_t, size_t, size_t, size_t, size_t, size_t) {}
+  void Render(const RenderRequest&) override {}
 
   void Resize(size_t, size_t) override {}
 };
@@ -104,7 +171,7 @@ public:
     return true;
   }
 
-  void Render(size_t, size_t, size_t, size_t, size_t, size_t) {}
+  void Render(const RenderRequest&) override {}
 
   void Resize(size_t, size_t) override {}
 

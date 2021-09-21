@@ -197,7 +197,7 @@ private:
     if (it == m_buffer.end())
       return std::string();
 
-    size_t length = std::distance(m_buffer.begin(), it);
+    size_t length = std::distance(m_buffer.begin(), it) + 1;
 
     std::string line;
 

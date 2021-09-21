@@ -19,19 +19,22 @@ public:
 
   virtual ~View() = default;
 
+  virtual bool HasRenderRequest() const = 0;
+
   /// Gets the current render request made by the view.
   ///
   /// @return The current render request.
   virtual RenderRequest GetCurrentRenderRequest() const = 0;
 
-  /// Responds to a render request with the resultant RGB buffer.
+  /// Responds to the current render request with the resultant RGB buffer.
   ///
-  /// @param req The request that the reply is for.
+  /// @param data The buffer containing the 24-bit RGB buffer. Should fit all
+  ///             24-bit RGB values requested.
   ///
-  /// @param buffer The buffer containing the 24-bit RGB buffer. Should fit all
-  ///               24-bit RGB values requested.
-  virtual void ReplyRenderRequest(const RenderRequest& req,
-                                  const unsigned char* data) = 0;
+  /// @param size The number of bytes in the data buffer.
+  ///
+  /// @return True on success, false on failure.
+  virtual bool ReplyRenderRequest(const unsigned char* data, size_t size) = 0;
 
   virtual void NewFrame() = 0;
 

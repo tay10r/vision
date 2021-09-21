@@ -1,34 +1,12 @@
 #pragma once
 
+#include "render_request.hpp"
+
 #include <vector>
 
 namespace vision::gui {
 
 struct Vertex;
-
-/// Describes which pixels should be rendered next. These results of these
-/// requests are agregated to form a full frame.
-struct RenderRequest final
-{
-  size_t unique_id = 0;
-
-  size_t x_pixel_count = 0;
-  size_t y_pixel_count = 0;
-
-  size_t x_pixel_offset = 0;
-  size_t y_pixel_offset = 0;
-
-  size_t x_pixel_stride = 0;
-  size_t y_pixel_stride = 0;
-
-  size_t x_frame_size = 0;
-  size_t y_frame_size = 0;
-
-  constexpr bool IsValid() const noexcept
-  {
-    return (x_frame_size > 0) && (y_frame_size > 0);
-  }
-};
 
 /// Describes how to render the results of a render request for a given preview
 /// index.

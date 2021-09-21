@@ -51,14 +51,23 @@ private:
   {
     m_response_parser = ResponseParser::Create(*this);
 
+    const QSize view_size = m_view->size();
+
+    m_connection->Resize(view_size.width(), view_size.height());
+
+    IssueRenderRequest();
+  }
+
+  void IssueRenderRequest()
+  {
     const RenderRequest req = m_view->GetCurrentRenderRequest();
 
-    m_connection->Render(req.x_pixel_count,
-                         req.y_pixel_count,
-                         req.x_pixel_offset,
-                         req.y_pixel_offset,
-                         req.x_pixel_stride,
-                         req.y_pixel_stride);
+    if (!req.IsValid()) {
+      m_monitor->LogError("Render request was issued but none was available.");
+      return;
+    }
+
+    m_connection->Render(req);
   }
 
   void OnConnectionRecv(const unsigned char* buffer, size_t length) override
@@ -87,9 +96,13 @@ private:
 
   void OnRGBBuffer(const unsigned char* buffer, size_t w, size_t h) override
   {
-    (void)buffer;
-    (void)w;
-    (void)h;
+    if (!m_view->ReplyRenderRequest(buffer, w * h * 3)) {
+      m_monitor->LogError("Failed to reply to render request.");
+      DisconnectDueToError();
+    }
+
+    if (m_view->HasRenderRequest())
+      IssueRenderRequest();
   }
 
   void DisconnectDueToError()

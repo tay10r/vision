@@ -122,7 +122,7 @@ main(int argc, char** argv)
 
     std::vector<unsigned char> buf = HandleRenderRequest(req);
 
-    view->ReplyRenderRequest(req, buf.data());
+    view->ReplyRenderRequest(buf.data(), buf.size());
   });
 
   timer.start(50);
