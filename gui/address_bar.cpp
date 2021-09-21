@@ -15,15 +15,25 @@ namespace {
 class Menu final : public QMenu
 {
 public:
-  Menu(QPushButton* button, QWidget* parent)
+  Menu(AddressBarObserver& observer, QPushButton* button, QWidget* parent)
     : QMenu(parent)
+    , m_observer(observer)
     , m_button(button)
   {
-    QAction* view_log_action = addAction("View Log");
+    QAction* view_monitor_action = addAction("View Monitor");
 
-    view_log_action->setCheckable(true);
+    view_monitor_action->setCheckable(true);
+
+    connect(
+      view_monitor_action, &QAction::toggled, this, &Menu::OnMonitorToggle);
 
     addAction("About");
+  }
+
+protected slots:
+  void OnMonitorToggle(bool checked)
+  {
+    m_observer.OnMonitorVisibilityToggle(checked);
   }
 
 protected:
@@ -37,6 +47,8 @@ protected:
   }
 
 private:
+  AddressBarObserver& m_observer;
+
   QPushButton* m_button;
 };
 
@@ -88,8 +100,6 @@ public:
             &AddressBar::OnReturnPressed);
 
     m_menu_button.setMenu(&m_menu);
-    // connect(&m_menu_button, &QPushButton::clicked, this,
-    // &AddressBar::ShowMenu);
   }
 
 protected slots:
@@ -106,7 +116,7 @@ private:
 
   AddressEdit m_line_edit{ this };
 
-  Menu m_menu{ &m_menu_button, this };
+  Menu m_menu{ m_observer, &m_menu_button, this };
 };
 
 } // namespace

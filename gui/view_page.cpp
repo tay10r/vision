@@ -31,6 +31,8 @@ public:
     m_layout.addWidget(m_view, 1);
 
     m_layout.addWidget(m_monitor, 1);
+
+    m_monitor->hide();
   }
 
 private:
@@ -42,7 +44,7 @@ private:
       m_monitor->LogError("Failed to connect to \"" + url + "\".");
   }
 
-  void OnLogVisibilityChange(bool visible) override
+  void OnMonitorVisibilityToggle(bool visible) override
   {
     m_monitor->setVisible(visible);
   }

@@ -12,7 +12,7 @@ public:
 
   virtual void OnConnectionRequest(const QString& url) = 0;
 
-  virtual void OnLogVisibilityChange(bool visible) = 0;
+  virtual void OnMonitorVisibilityToggle(bool visible) = 0;
 };
 
 QWidget*
