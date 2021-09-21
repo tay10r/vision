@@ -2,6 +2,7 @@
 
 #include "lexer.hpp"
 
+#include <algorithm>
 #include <optional>
 #include <string>
 #include <vector>
@@ -38,7 +39,9 @@ class ResponseParserImpl final : public ResponseParser
 public:
   ResponseParserImpl(ResponseObserver& o)
     : m_observer(o)
-  {}
+  {
+    m_buffer.reserve(m_buffer_max);
+  }
 
   bool Write(const char* data, size_t length) override
   {
@@ -60,7 +63,12 @@ public:
     return true;
   }
 
-  void SetMaxBufferSize(size_t max_size) override { m_buffer_max = max_size; }
+  void SetMaxBufferSize(size_t max_size) override
+  {
+    m_buffer_max = max_size;
+
+    m_buffer.reserve(max_size);
+  }
 
 private:
   bool ParseBuffer()
@@ -183,23 +191,20 @@ private:
 
   std::string GetLine() const
   {
-    size_t length = 0;
+    std::vector<char>::const_iterator it =
+      std::find(m_buffer.begin(), m_buffer.end(), '\n');
+
+    if (it == m_buffer.end())
+      return std::string();
+
+    size_t length = std::distance(m_buffer.begin(), it);
 
     std::string line;
 
-    while (!OutOfBounds(length)) {
-      line.push_back(Peek(length));
+    for (size_t i = 0; i < length; i++)
+      line.push_back(m_buffer.at(i));
 
-      if (line.back() == '\n')
-        return line;
-      else if ((line.size() > 1) && (line[line.size() - 2] == '\r') &&
-               (line[line.size() - 1] == '\n'))
-        return line;
-      else
-        length++;
-    }
-
-    return std::string();
+    return line;
   }
 
   char Peek(size_t offset) const noexcept
@@ -227,9 +232,8 @@ private:
 private:
   ResponseObserver& m_observer;
 
-  /// Beyond this response size is considered to be invalid. This is the size of
-  /// a 4096 by 4096 RGB buffer (24-bit) with the header `rgb 4096 4096\r\n`.
-  size_t m_buffer_max = 50331648 + 15;
+  /// Beyond this response size (16 MiB) is considered to be invalid.
+  size_t m_buffer_max = 16777216;
 
   std::vector<char> m_buffer;
 };

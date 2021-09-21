@@ -25,6 +25,8 @@ class Connection
 public:
   virtual ~Connection() = default;
 
+  virtual bool Connect() = 0;
+
   virtual void Resize(size_t w, size_t h) = 0;
 
   virtual void Render(size_t w,

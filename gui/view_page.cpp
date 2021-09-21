@@ -4,6 +4,7 @@
 #include "connection.hpp"
 #include "controller.hpp"
 #include "monitor.hpp"
+#include "response.hpp"
 #include "schedule.hpp"
 #include "view.hpp"
 
@@ -18,6 +19,7 @@ class ViewPage final
   : public QWidget
   , public AddressBarObserver
   , public ConnectionObserver
+  , public ResponseObserver
 {
 public:
   ViewPage(QWidget* parent, Controller& controller)
@@ -34,7 +36,10 @@ public:
 private:
   void OnConnectionRequest(const QString& url) override
   {
-    m_connection = m_controller.Connect(url, *this);
+    m_connection = m_controller.CreateConnection(url, *this);
+
+    if (!m_connection->Connect())
+      m_monitor->LogError("Failed to connect to \"" + url + "\".");
   }
 
   void OnLogVisibilityChange(bool visible) override
@@ -44,6 +49,8 @@ private:
 
   void OnConnectionStart() override
   {
+    m_response_parser = ResponseParser::Create(*this);
+
     const RenderRequest req = m_view->GetCurrentRenderRequest();
 
     m_connection->Render(req.x_pixel_count,
@@ -54,9 +61,42 @@ private:
                          req.y_pixel_stride);
   }
 
-  void OnConnectionRecv(const unsigned char*, size_t) override
+  void OnConnectionRecv(const unsigned char* buffer, size_t length) override
   {
-    //
+    m_monitor->LogConnectionRead(length);
+
+    m_response_parser->Write((const char*)buffer, length);
+  }
+
+  void OnInvalidResponse(const std::string_view& reason) override
+  {
+    QString message = QString("Invalid response: %1")
+                        .arg(QString::fromUtf8(&reason[0], reason.size()));
+
+    m_monitor->LogError(message);
+
+    DisconnectDueToError();
+  }
+
+  void OnBufferOverflow() override
+  {
+    m_monitor->LogError("Buffer overflow occurred.");
+
+    DisconnectDueToError();
+  }
+
+  void OnRGBBuffer(const unsigned char* buffer, size_t w, size_t h) override
+  {
+    (void)buffer;
+    (void)w;
+    (void)h;
+  }
+
+  void DisconnectDueToError()
+  {
+    m_monitor->LogInfo("Disconnecting due to error.");
+
+    m_connection.reset();
   }
 
 private:
@@ -71,6 +111,8 @@ private:
   Controller& m_controller;
 
   std::unique_ptr<Connection> m_connection;
+
+  std::unique_ptr<ResponseParser> m_response_parser;
 };
 
 } // namespace

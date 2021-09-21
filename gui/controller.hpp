@@ -16,7 +16,7 @@ public:
 
   virtual ~Controller() = default;
 
-  virtual auto Connect(const QString&, ConnectionObserver& observer)
+  virtual auto CreateConnection(const QString&, ConnectionObserver& observer)
     -> std::unique_ptr<Connection> = 0;
 };
 
