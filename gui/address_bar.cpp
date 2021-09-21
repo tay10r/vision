@@ -1,5 +1,6 @@
 #include "address_bar.hpp"
 
+#include <QCompleter>
 #include <QFocusEvent>
 #include <QHBoxLayout>
 #include <QLineEdit>
@@ -84,13 +85,17 @@ protected:
 class AddressBar final : public QWidget
 {
 public:
-  AddressBar(QWidget* parent, AddressBarObserver& observer)
+  AddressBar(QWidget* parent,
+             QAbstractItemModel* urls_model,
+             AddressBarObserver& observer)
     : QWidget(parent)
     , m_observer(observer)
   {
     m_layout.addWidget(&m_line_edit);
 
     m_layout.addWidget(&m_menu_button);
+
+    m_line_edit.setCompleter(new QCompleter(urls_model, &m_line_edit));
 
     setSizePolicy(sizePolicy().horizontalPolicy(), QSizePolicy::Minimum);
 
@@ -122,9 +127,11 @@ private:
 } // namespace
 
 QWidget*
-CreateAddressBar(QWidget* parent, AddressBarObserver& observer)
+CreateAddressBar(QWidget* parent,
+                 QAbstractItemModel* urls_model,
+                 AddressBarObserver& observer)
 {
-  return new AddressBar(parent, observer);
+  return new AddressBar(parent, urls_model, observer);
 }
 
 } // namespace vision::gui

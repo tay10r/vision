@@ -16,6 +16,11 @@
 #include <assert.h>
 #include <stdint.h>
 
+#ifdef NDEBUG
+#undef assert
+#define assert(expr) ((void)expr)
+#endif
+
 namespace vision::gui {
 
 namespace {
@@ -150,9 +155,13 @@ private:
   {
     std::vector<Vertex> vertices = m_schedule.GetVertexBuffer();
 
-    assert(m_vertex_buffer.create());
+    bool success = m_vertex_buffer.create();
 
-    assert(m_vertex_buffer.bind());
+    assert(success);
+
+    success = m_vertex_buffer.bind();
+
+    assert(success);
 
     m_vertex_buffer.allocate(&vertices[0],
                              vertices.size() * sizeof(vertices[0]));
@@ -257,7 +266,13 @@ protected:
 
     const Schedule& schedule = m_frame_build_context->GetSchedule();
 
-    QOpenGLFunctions* functions = QOpenGLContext::currentContext()->functions();
+    QOpenGLContext* context = QOpenGLContext::currentContext();
+    if (!context)
+      return;
+
+    QOpenGLFunctions* functions = context->functions();
+    if (!functions)
+      return;
 
     // Clear Window
 
@@ -270,9 +285,13 @@ protected:
 
     const int vertex_attrib = m_program.attributeLocation("vertex");
 
-    assert(m_program.bind());
+    bool success = m_program.bind();
 
-    assert(m_frame_build_context->GetVertexBuffer().bind());
+    assert(success);
+
+    success = m_frame_build_context->GetVertexBuffer().bind();
+
+    assert(success);
 
     m_program.enableAttributeArray(vertex_attrib);
 
@@ -322,7 +341,7 @@ private:
 
   QOpenGLShaderProgram m_program;
 
-  size_t m_div_level = 2;
+  size_t m_div_level = 4;
 };
 
 } // namespace

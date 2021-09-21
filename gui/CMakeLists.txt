@@ -13,6 +13,8 @@ add_library(vision_gui SHARED
   address_bar.cpp
   central_widget.hpp
   central_widget.cpp
+  debug_render.hpp
+  debug_render.cpp
   view_page.hpp
   view_page.cpp
   view.hpp

@@ -2,148 +2,40 @@
 
 #include "connection.hpp"
 #include "controller.hpp"
+#include "debug_render.hpp"
 #include "render_request.hpp"
 
-#include <iostream>
 #include <random>
 #include <sstream>
 #include <vector>
 
 #include <QObject>
 #include <QString>
+#include <QStringListModel>
 #include <QTimer>
+#include <QUrl>
+
+#include <QDebug>
 
 namespace vision::gui {
 
 namespace {
 
-struct Circle final
-{
-  float u;
-  float v;
-  float r;
-
-  bool Contains(float other_u, float other_v) const noexcept
-  {
-    const float a = (u - other_u);
-    const float b = (v - other_v);
-
-    return ((a * a) + (b * b)) < (r * r);
-  }
-};
-
-class DebugConnection final
-  : public Connection
-  , public QObject
-{
-public:
-  DebugConnection(ConnectionObserver& o)
-    : m_observer(o)
-  {
-    std::cout << "Debug connection instanced." << std::endl;
-  }
-
-  bool Connect() override
-  {
-    m_observer.OnConnectionStart();
-
-    return true;
-  }
-
-  void Render(const RenderRequest& req) override
-  {
-    m_render_requests.emplace_back(req);
-
-    QTimer::singleShot(10, this, &DebugConnection::HandleFirstRenderRequest);
-  }
-
-  void Resize(size_t w, size_t h) override
-  {
-    m_width = std::max(w, size_t(1));
-    m_height = std::max(h, size_t(1));
-    std::cout << "Resizing to (" << w << ", " << h << ")" << std::endl;
-  }
-
-protected slots:
-  void HandleFirstRenderRequest()
-  {
-    if (m_render_requests.empty())
-      return;
-
-    HandleRenderRequest(m_render_requests[0]);
-
-    m_render_requests.erase(m_render_requests.begin());
-  }
-
-private:
-  void HandleRenderRequest(const RenderRequest& req)
-  {
-    std::uniform_real_distribution<float> color_dist(0.0f, 1.0f);
-
-    const float color[3]{ color_dist(m_rng),
-                          color_dist(m_rng),
-                          color_dist(m_rng) };
-
-    std::vector<unsigned char> buffer(req.x_pixel_count * req.y_pixel_count *
-                                      3);
-
-    const float x_scale = 1.0f / m_width;
-    const float y_scale = 1.0f / m_height;
-
-    Circle circle{ 0.5, 0.5, 0.3 };
-
-    for (size_t y = 0; y < req.y_pixel_count; y++) {
-
-      for (size_t x = 0; x < req.x_pixel_count; x++) {
-
-        const float u = (req.GetFrameX(x) + 0.5f) * x_scale;
-        const float v = (req.GetFrameY(y) + 0.5f) * y_scale;
-
-        const float k = circle.Contains(u, v) ? 1.0f : 0.0f;
-
-        size_t buffer_offset = ((y * req.x_pixel_count) + x) * 3;
-
-        buffer[buffer_offset + 0] = color[0] * k * 255;
-        buffer[buffer_offset + 1] = color[1] * k * 255;
-        buffer[buffer_offset + 2] = color[2] * k * 255;
-      }
-    }
-
-    std::ostringstream header_stream;
-
-    header_stream << "rgb buffer " << req.x_pixel_count << ' '
-                  << req.y_pixel_count << '\n';
-
-    std::string header = header_stream.str();
-
-    m_observer.OnConnectionRecv((const unsigned char*)&header[0],
-                                header.size());
-
-    m_observer.OnConnectionRecv(&buffer[0], buffer.size());
-  }
-
-private:
-  std::vector<RenderRequest> m_render_requests;
-
-  ConnectionObserver& m_observer;
-
-  std::mt19937 m_rng{ 1234 };
-
-  size_t m_width = 1;
-
-  size_t m_height = 1;
-};
-
 class BadConnection final : public Connection
 {
 public:
-  BadConnection() { std::cout << "Bad connection instanced." << std::endl; }
+  BadConnection(ConnectionObserver& observer)
+    : m_observer(observer)
+  {}
 
   bool Connect() override { return false; }
 
   void Render(const RenderRequest&) override {}
 
   void Resize(size_t, size_t) override {}
+
+private:
+  ConnectionObserver& m_observer;
 };
 
 class BufferOverflowConnection final
@@ -208,20 +100,120 @@ private:
   std::mt19937 m_rng{ 1234 };
 };
 
-class FakeController final : public Controller
+class NullConnection final : public Connection
 {
 public:
+  NullConnection(ConnectionObserver& observer)
+    : m_observer(observer)
+  {}
+
+  bool Connect() override { return false; }
+
+  void Render(const RenderRequest&) override {}
+
+  void Resize(size_t, size_t) override {}
+
+private:
+  ConnectionObserver& m_observer;
+};
+
+class URLsModel final
+{
+public:
+  URLsModel()
+  {
+    QStringList builtin_urls;
+    builtin_urls << "debug://bad_connection";
+    builtin_urls << "debug://buffer_overflow";
+    builtin_urls << "debug://render";
+    m_model.setStringList(builtin_urls);
+  }
+
+  QStringListModel* GetModel() { return &m_model; }
+
+private:
+  QStringListModel m_model;
+};
+
+class ConnectionFactory final
+{
+public:
+  auto CreateConnection(const QString& urlString, ConnectionObserver& observer)
+    -> std::unique_ptr<Connection>
+  {
+    const QUrl url(urlString);
+
+    if (!url.isValid())
+      return std::unique_ptr<Connection>(new BadConnection(observer));
+
+    const QString scheme = url.scheme();
+
+    ConnectionPtr connection;
+
+    if (scheme == "file")
+      connection = CreateProgramConnection(url, observer);
+    else if (scheme == "debug")
+      connection = CreateDebugConnection(url, observer);
+    else
+      connection = CreateTCPConnection(url, observer);
+
+    if (!connection)
+      connection.reset(new NullConnection(observer));
+
+    return connection;
+  }
+
+private:
+  using ConnectionPtr = std::unique_ptr<Connection>;
+
+  auto CreateDebugConnection(const QUrl& url, ConnectionObserver& observer)
+    -> ConnectionPtr
+  {
+    const QString debug_kind = url.toString();
+
+    if (debug_kind == "debug://bad_connection")
+      return ConnectionPtr(new BadConnection(observer));
+    else if (debug_kind == "debug://buffer_overflow")
+      return ConnectionPtr(new BufferOverflowConnection(observer));
+    else if (debug_kind == "debug://render")
+      return ConnectionPtr(CreateDebugRenderer(observer));
+    else
+      return nullptr;
+  }
+
+  auto CreateProgramConnection(const QUrl&, ConnectionObserver&)
+    -> ConnectionPtr
+  {
+    // TODO
+
+    return nullptr;
+  }
+
+  auto CreateTCPConnection(const QUrl&, ConnectionObserver&) -> ConnectionPtr
+  {
+    //
+
+    return nullptr;
+  }
+};
+
+class FakeController final
+  : public Controller
+  , public QObject
+{
+public:
+  QAbstractItemModel* GetURLsModel() override { return urls_model.GetModel(); }
+
   auto CreateConnection(const QString& url, ConnectionObserver& observer)
     -> std::unique_ptr<Connection> override
   {
-    if (url == "debug")
-      return std::unique_ptr<Connection>(new DebugConnection(observer));
-    else if (url == "buffer overflow")
-      return std::unique_ptr<Connection>(
-        new BufferOverflowConnection(observer));
-    else
-      return std::unique_ptr<Connection>(new BadConnection());
+    return m_connection_factory.CreateConnection(url, observer);
   }
+
+private:
+  URLsModel urls_model;
+
+  ConnectionFactory m_connection_factory;
 };
 
 } // namespace

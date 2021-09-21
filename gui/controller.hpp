@@ -3,6 +3,7 @@
 #include <memory>
 
 class QString;
+class QAbstractItemModel;
 
 namespace vision::gui {
 
@@ -18,6 +19,8 @@ public:
 
   virtual auto CreateConnection(const QString&, ConnectionObserver& observer)
     -> std::unique_ptr<Connection> = 0;
+
+  virtual auto GetURLsModel() -> QAbstractItemModel* = 0;
 };
 
 } // namespace vision::gui

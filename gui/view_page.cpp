@@ -25,6 +25,7 @@ class ViewPage final
 public:
   ViewPage(QWidget* parent, Controller& controller)
     : QWidget(parent)
+    , m_address_bar(CreateAddressBar(this, controller.GetURLsModel(), *this))
     , m_controller(controller)
   {
     m_layout.addWidget(m_address_bar);
@@ -141,7 +142,7 @@ private:
   }
 
 private:
-  QWidget* m_address_bar{ CreateAddressBar(this, *this) };
+  QWidget* m_address_bar;
 
   View* m_view{ CreateView(*this, this) };
 

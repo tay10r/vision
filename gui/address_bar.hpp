@@ -1,5 +1,6 @@
 #pragma once
 
+class QAbstractItemModel;
 class QWidget;
 class QString;
 
@@ -16,6 +17,8 @@ public:
 };
 
 QWidget*
-CreateAddressBar(QWidget* parent, AddressBarObserver& observer);
+CreateAddressBar(QWidget* parent,
+                 QAbstractItemModel* urls_model,
+                 AddressBarObserver& observer);
 
 } // namespace vision::gui
