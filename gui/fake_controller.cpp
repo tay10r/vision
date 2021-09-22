@@ -34,6 +34,12 @@ public:
 
   void Resize(const ResizeRequest&) override {}
 
+  void SendKey(const std::string_view&, bool) override {}
+
+  void SendMouseButton(const std::string_view&, int, int, bool) override {}
+
+  void SendMouseMove(int, int) override {}
+
 private:
   ConnectionObserver& m_observer;
 };
@@ -66,6 +72,12 @@ public:
   void Render(const RenderRequest&) override {}
 
   void Resize(const ResizeRequest&) override {}
+
+  void SendKey(const std::string_view&, bool) override {}
+
+  void SendMouseButton(const std::string_view&, int, int, bool) override {}
+
+  void SendMouseMove(int, int) override {}
 
 protected slots:
   void SendRandomData()
@@ -112,6 +124,12 @@ public:
   void Render(const RenderRequest&) override {}
 
   void Resize(const ResizeRequest&) override {}
+
+  void SendKey(const std::string_view&, bool) override {}
+
+  void SendMouseButton(const std::string_view&, int, int, bool) override {}
+
+  void SendMouseMove(int, int) override {}
 
 private:
   ConnectionObserver& m_observer;

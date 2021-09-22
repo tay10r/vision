@@ -111,7 +111,7 @@ public:
   {
     m_render_requests.emplace_back(req);
 
-    QTimer::singleShot(10, this, &RenderConnection::HandleFirstRenderRequest);
+    QTimer::singleShot(0, this, &RenderConnection::HandleFirstRenderRequest);
   }
 
   void Resize(const ResizeRequest& req) override
@@ -131,6 +131,12 @@ public:
     for (size_t i = 0; i < (req.padded_width * req.padded_height); i++)
       m_rngs.emplace_back(seed_rng());
   }
+
+  void SendKey(const std::string_view&, bool) override {}
+
+  void SendMouseButton(const std::string_view&, int, int, bool) override {}
+
+  void SendMouseMove(int, int) override {}
 
 protected slots:
   void HandleFirstRenderRequest()

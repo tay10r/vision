@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string_view>
+
 #include <stddef.h>
 
 namespace vision::gui {
@@ -33,6 +35,15 @@ public:
   virtual void Resize(const ResizeRequest&) = 0;
 
   virtual void Render(const RenderRequest&) = 0;
+
+  virtual void SendKey(const std::string_view& key, bool state) = 0;
+
+  virtual void SendMouseButton(const std::string_view& button_name,
+                               int x,
+                               int y,
+                               bool state) = 0;
+
+  virtual void SendMouseMove(int x, int y) = 0;
 };
 
 } // namespace vision::gui

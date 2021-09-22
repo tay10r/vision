@@ -86,6 +86,14 @@ class ViewObserver final : public vision::gui::ViewObserver
 {
 public:
   void OnViewResize(size_t, size_t, size_t, size_t) override {}
+
+  void OnNewViewFrame() override {}
+
+  void OnViewKeyEvent(const QString&, bool) override {}
+
+  void OnViewMouseButtonEvent(const QString&, int, int, bool) override {}
+
+  void OnViewMouseMoveEvent(int, int) override {}
 };
 
 } // namespace

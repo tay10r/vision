@@ -4,6 +4,8 @@
 #include "schedule.hpp"
 #include "vertex.hpp"
 
+#include <QKeyEvent>
+#include <QMouseEvent>
 #include <QOpenGLBuffer>
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
@@ -25,65 +27,6 @@
 namespace vision::gui {
 
 namespace {
-
-const char* vertSrc = R"(
-#version 330 core
-
-layout(location = 0) in vec4 vertex;
-
-uniform float x_partition_size = 0.0;
-uniform float y_partition_size = 0.0;
-
-uniform float x_pixel_offset = 0.0;
-uniform float y_pixel_offset = 0.0;
-
-uniform float x_pixel_stride = 1.0;
-uniform float y_pixel_stride = 1.0;
-
-out vec2 tex_coords;
-
-void
-main()
-{
-  float x_max = x_partition_size * x_pixel_stride;
-  float y_max = y_partition_size * y_pixel_stride;
-
-  vec2 offset = vec2(0.0, 0.0);
-
-  offset += vec2(vertex.x * x_partition_size * x_pixel_stride,
-                 vertex.y * y_partition_size * y_pixel_stride);
-
-  offset += vec2(vertex.z * x_partition_size,
-                 vertex.w * y_partition_size);
-
-  offset += vec2(x_pixel_offset, y_pixel_offset);
-
-  tex_coords = vertex.xy;
-
-  vec2 position = vec2(offset.x / x_max,
-                       offset.y / y_max);
-
-  float ndc_x = (position.x * 2.0) - 1.0;
-  float ndc_y = 1.0 - (position.y * 2.0);
-  gl_Position = vec4(ndc_x, ndc_y, 0.0, 1.0);
-}
-)";
-
-const char* fragSrc = R"(
-#version 330 core
-
-out vec4 color;
-
-uniform sampler2D partition;
-
-in vec2 tex_coords;
-
-void
-main()
-{
-  color = texture(partition, tex_coords);
-}
-)";
 
 struct RenderReply final
 {
@@ -195,6 +138,8 @@ public:
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
     setFocusPolicy(Qt::StrongFocus);
+
+    setMouseTracking(true);
   }
 
   ~ViewImpl() { makeCurrent(); }
@@ -231,6 +176,8 @@ public:
     m_frame_build_context.reset(new FrameBuildContext(size(), m_div_level));
 
     doneCurrent();
+
+    NotifyNewFrame();
   }
 
   bool NeedsNewFrame() override { return false; }
@@ -265,11 +212,105 @@ public:
   }
 
 protected:
+  void focusInEvent(QFocusEvent* event) override
+  {
+    setCursor(Qt::BlankCursor);
+
+    QOpenGLWidget::focusInEvent(event);
+  }
+
+  void focusOutEvent(QFocusEvent* event) override
+  {
+    unsetCursor();
+
+    QOpenGLWidget::focusOutEvent(event);
+  }
+
+  void mouseMoveEvent(QMouseEvent* event) override
+  {
+    if (hasFocus())
+      NotifyMouseMoveEvent(event->x(), event->y());
+
+    QWidget::mouseMoveEvent(event);
+  }
+
+  void keyPressEvent(QKeyEvent* event) override
+  {
+    QString key_text = event->text();
+
+    if (!key_text.isEmpty() && !event->isAutoRepeat()) {
+
+      NotifyKeyEvent(key_text, true);
+
+      NewFrame();
+    }
+
+    QOpenGLWidget::keyPressEvent(event);
+  }
+
+  void keyReleaseEvent(QKeyEvent* event) override
+  {
+    QString key_text = event->text();
+
+    if (!key_text.isEmpty() && !event->isAutoRepeat()) {
+
+      NotifyKeyEvent(key_text, false);
+
+      NewFrame();
+    }
+
+    QOpenGLWidget::keyPressEvent(event);
+  }
+
+  QString GetButtonName(const QMouseEvent* event)
+  {
+    switch (event->button()) {
+      case Qt::LeftButton:
+        return "left";
+      case Qt::RightButton:
+        return "right";
+      default:
+        break;
+    }
+
+    return QString();
+  }
+
+  bool NotifyMouseButtonEvent(const QMouseEvent* event, bool state)
+  {
+    const QString button_name = GetButtonName(event);
+
+    if (button_name.isEmpty())
+      return false;
+
+    View::NotifyMouseButtonEvent(button_name, event->x(), event->y(), state);
+
+    return true;
+  }
+
+  void mousePressEvent(QMouseEvent* event) override
+  {
+    if (NotifyMouseButtonEvent(event, true))
+      NewFrame();
+
+    QOpenGLWidget::mousePressEvent(event);
+  }
+
+  void mouseReleaseEvent(QMouseEvent* event) override
+  {
+    if (NotifyMouseButtonEvent(event, false))
+      NewFrame();
+
+    QOpenGLWidget::mouseReleaseEvent(event);
+  }
+
   void initializeGL() override
   {
-    m_program.addShaderFromSourceCode(QOpenGLShader::Vertex, vertSrc);
+    m_program.addShaderFromSourceFile(QOpenGLShader::Vertex,
+                                      ":/shaders/blit_partition.vert");
 
-    m_program.addShaderFromSourceCode(QOpenGLShader::Fragment, fragSrc);
+    m_program.addShaderFromSourceFile(QOpenGLShader::Fragment,
+                                      ":/shaders/blit_partition.frag");
 
     m_program.link();
 
@@ -347,8 +388,7 @@ protected:
   {
     context()->functions()->glViewport(0, 0, w, h);
 
-    m_frame_build_context.reset(
-      new FrameBuildContext(QSize(w, h), m_div_level));
+    NewFrame();
 
     NotifyResize();
   }
@@ -376,6 +416,33 @@ View::NotifyResize()
 
   m_observer.OnViewResize(
     req.width, req.height, req.padded_width, req.padded_height);
+}
+
+void
+View::NotifyKeyEvent(const QString& key_text, bool state)
+{
+  m_observer.OnViewKeyEvent(key_text, state);
+}
+
+void
+View::NotifyMouseButtonEvent(const QString& button_name,
+                             int x,
+                             int y,
+                             bool state)
+{
+  m_observer.OnViewMouseButtonEvent(button_name, x, y, state);
+}
+
+void
+View::NotifyMouseMoveEvent(int x, int y)
+{
+  m_observer.OnViewMouseMoveEvent(x, y);
+}
+
+void
+View::NotifyNewFrame()
+{
+  m_observer.OnNewViewFrame();
 }
 
 } // namespace vision::gui

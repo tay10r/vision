@@ -17,6 +17,8 @@ add_library(vision_gui SHARED
   central_widget.cpp
   debug_render.hpp
   debug_render.cpp
+  debug_input.hpp
+  debug_input.cpp
   view_page.hpp
   view_page.cpp
   view.hpp
@@ -33,7 +35,12 @@ add_library(vision_gui SHARED
   lexer.cpp
   token.hpp
   token.cpp
-  ${controller_sources})
+  ${controller_sources}
+  resources.qrc)
+
+set_target_properties(vision_gui
+  PROPERTIES
+    AUTORCC ON)
 
 target_compile_features(vision_gui PUBLIC cxx_std_17)
 

@@ -169,7 +169,7 @@ private:
 
     axes[1]->setMin(min_read_speed / speed_div);
     axes[1]->setMax(max_read_speed / speed_div);
-    axes[1]->setTitleText(QString("Read Speed (%1)").arg(units));
+    axes[1]->setTitleText(QString("Read Speed (%1/s)").arg(units));
   }
 
 private:

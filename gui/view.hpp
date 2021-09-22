@@ -6,6 +6,8 @@
 
 #include <stddef.h>
 
+class QString;
+
 namespace vision::gui {
 
 struct RenderRequest;
@@ -20,6 +22,17 @@ public:
                             size_t h,
                             size_t padded_w,
                             size_t padded_h) = 0;
+
+  virtual void OnViewKeyEvent(const QString& key, bool state) = 0;
+
+  virtual void OnViewMouseButtonEvent(const QString& button,
+                                      int x,
+                                      int y,
+                                      bool state) = 0;
+
+  virtual void OnViewMouseMoveEvent(int x, int y) = 0;
+
+  virtual void OnNewViewFrame() = 0;
 };
 
 class View : public QOpenGLWidget
@@ -62,6 +75,17 @@ public:
 
 protected:
   void NotifyResize();
+
+  void NotifyKeyEvent(const QString& key_text, bool state);
+
+  void NotifyMouseButtonEvent(const QString& button_name,
+                              int x,
+                              int y,
+                              bool state);
+
+  void NotifyMouseMoveEvent(int x, int y);
+
+  void NotifyNewFrame();
 
 private:
   ViewObserver& m_observer;

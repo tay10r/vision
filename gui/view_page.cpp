@@ -50,8 +50,45 @@ private:
     ResizeRequest resize_req{ w, h, padded_w, padded_h };
 
     IssueResize(resize_req);
+  }
+
+  void OnNewViewFrame() override
+  {
+    if (!m_connection)
+      return;
 
     IssueRenderRequest();
+  }
+
+  void OnViewKeyEvent(const QString& key_text, bool state) override
+  {
+    if (!m_connection)
+      return;
+
+    const std::string key_text_utf8(key_text.toStdString());
+
+    m_connection->SendKey(key_text_utf8, state);
+  }
+
+  void OnViewMouseMoveEvent(int x, int y) override
+  {
+    if (!m_connection)
+      return;
+
+    m_connection->SendMouseMove(x, y);
+  }
+
+  void OnViewMouseButtonEvent(const QString& button_name,
+                              int x,
+                              int y,
+                              bool state) override
+  {
+    if (!m_connection)
+      return;
+
+    const std::string button_name_utf8(button_name.toStdString());
+
+    m_connection->SendMouseButton(button_name_utf8, x, y, state);
   }
 
   void OnConnectionRequest(const QString& url) override
