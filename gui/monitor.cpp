@@ -41,6 +41,8 @@ public:
 
     m_io_chart->createDefaultAxes();
 
+    m_io_chart->legend()->hide();
+
     m_log.setReadOnly(true);
 
     m_sampling_timer.setInterval(m_sampling_interval);
@@ -108,44 +110,84 @@ private:
     size_t delta_t =
       std::chrono::duration_cast<Microseconds>(t - m_start_time).count();
 
-    if (m_read_series->count() >= m_max_read_samples)
-      m_read_series->remove(0);
+    if (m_samples.size() >= m_max_read_samples)
+      m_samples.erase(m_samples.begin());
+
+    m_samples.emplace_back(IOSample{ float(delta_t), read_speed });
 
     m_read_series->append(1.0e-6f * delta_t, read_speed);
 
-    QVector<QPointF> points = m_read_series->pointsVector();
-
-    if (points.empty())
+    if (m_samples.empty())
       return;
 
-    float min_delta_t = points.front().x();
-    float max_delta_t = points.back().x();
+    float min_delta_t = m_samples.front().time;
+    float max_delta_t = m_samples.back().time;
 
-    float min_read_speed = points[0].y();
-    float max_read_speed = points[0].y();
+    float min_read_speed = m_samples[0].speed;
+    float max_read_speed = m_samples[0].speed;
 
-    for (const auto& p : points) {
-      min_read_speed = std::min(min_read_speed, float(p.y()));
-      max_read_speed = std::max(max_read_speed, float(p.y()));
+    for (const auto& sample : m_samples) {
+      min_read_speed = std::min(min_read_speed, sample.speed);
+      max_read_speed = std::max(max_read_speed, sample.speed);
     }
+
+    min_delta_t *= 1e-6;
+    max_delta_t *= 1e-6;
+
+    const char* units = "B";
+
+    float speed_div = 1;
+
+    if (max_read_speed >= 1073741824.0f) {
+      speed_div = 1073741824.0f;
+      units = "GiB";
+    } else if (max_read_speed >= 1048576.0f) {
+      speed_div = 1048576.0f;
+      units = "MiB";
+    } else if (max_read_speed >= 1024.0f) {
+      speed_div = 1024.0f;
+      units = "KiB";
+    }
+
+    QVector<QPointF> points;
+
+    points.reserve(m_samples.size());
+
+    for (const auto& sample : m_samples) {
+
+      const QPointF point(sample.time * 1e-6, sample.speed / speed_div);
+
+      points.push_back(point);
+    }
+
+    m_read_series->replace(points);
 
     QList<QtCharts::QAbstractAxis*> axes = m_io_chart->axes();
 
     axes[0]->setMin(min_delta_t);
     axes[0]->setMax(max_delta_t);
 
-    axes[1]->setMin(min_read_speed);
-    axes[1]->setMax(max_read_speed);
+    axes[1]->setMin(min_read_speed / speed_div);
+    axes[1]->setMax(max_read_speed / speed_div);
+    axes[1]->setTitleText(QString("Read Speed (%1)").arg(units));
   }
 
 private:
+  struct IOSample final
+  {
+    float time;
+    float speed;
+  };
+
   QTimer m_sampling_timer;
 
   int m_sampling_interval = 100;
 
   size_t m_read_count = 0;
 
-  int m_max_read_samples = 128;
+  size_t m_max_read_samples = 128;
+
+  std::vector<IOSample> m_samples;
 
   TimePoint m_start_time;
 
