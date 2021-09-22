@@ -138,7 +138,21 @@ protected slots:
     if (m_render_requests.empty())
       return;
 
-    HandleRenderRequest(m_render_requests[0]);
+    RenderRequest req = m_render_requests[0];
+
+    // Get rid of render requests issued for a different size.
+
+    while ((req.x_frame_size != m_width) || (req.y_frame_size != m_height)) {
+
+      m_render_requests.erase(m_render_requests.begin());
+
+      if (m_render_requests.empty())
+        return;
+
+      req = m_render_requests[0];
+    }
+
+    HandleRenderRequest(req);
 
     m_render_requests.erase(m_render_requests.begin());
   }
