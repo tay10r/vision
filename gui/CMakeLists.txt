@@ -19,8 +19,8 @@ add_library(vision_gui SHARED
   debug_render.cpp
   debug_input.hpp
   debug_input.cpp
-  view_page.hpp
-  view_page.cpp
+  page.hpp
+  page.cpp
   view.hpp
   view.cpp
   schedule.hpp

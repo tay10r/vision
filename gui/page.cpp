@@ -1,4 +1,4 @@
-#include "view_page.hpp"
+#include "page.hpp"
 
 #include "address_bar.hpp"
 #include "connection.hpp"
@@ -16,7 +16,7 @@ namespace vision::gui {
 
 namespace {
 
-class ViewPage final
+class Page final
   : public QWidget
   , public AddressBarObserver
   , public ConnectionObserver
@@ -24,7 +24,7 @@ class ViewPage final
   , public ViewObserver
 {
 public:
-  ViewPage(QWidget* parent, Controller& controller)
+  Page(QWidget* parent, Controller& controller)
     : QWidget(parent)
     , m_address_bar(CreateAddressBar(this, controller.GetURLsModel(), *this))
     , m_controller(controller)
@@ -201,9 +201,9 @@ private:
 } // namespace
 
 QWidget*
-CreateViewPage(QWidget* parent, Controller& controller)
+CreatePage(QWidget* parent, Controller& controller)
 {
-  return new ViewPage(parent, controller);
+  return new Page(parent, controller);
 }
 
 } // namespace vision::gui

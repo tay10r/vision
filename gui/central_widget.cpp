@@ -1,7 +1,7 @@
 #include "central_widget.hpp"
 
 #include "controller.hpp"
-#include "view_page.hpp"
+#include "page.hpp"
 
 #include <QLabel>
 #include <QTabBar>
@@ -32,11 +32,13 @@ public:
   {
     addTab(&m_add_tab_widget, "+");
 
-    AddViewPage();
+    AddPage();
 
     SortAddButton();
 
     setCurrentIndex(0);
+
+    setMovable(true);
 
     connect(
       this, &QTabWidget::tabBarClicked, this, &CentralWidget::OnTabClicked);
@@ -46,7 +48,7 @@ protected slots:
   void OnTabClicked(int tabIndex)
   {
     if (tabIndex == indexOf(&m_add_tab_widget))
-      AddViewPage();
+      AddPage();
   }
 
 private:
@@ -59,9 +61,9 @@ private:
     addTab(&m_add_tab_widget, "+");
   }
 
-  int AddViewPage()
+  int AddPage()
   {
-    QWidget* view_page = CreateViewPage(this, m_controller);
+    QWidget* view_page = CreatePage(this, m_controller);
 
     addTab(view_page, "New Tab");
 
