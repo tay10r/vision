@@ -100,10 +100,13 @@ private:
       return false;
 
     if (tokens.Size() < 3) {
-      HandleInvalidInput("Width and height are missing.");
+      HandleInvalidInput("Width, height and request ID are missing.");
       return true;
     } else if (tokens.Size() < 4) {
-      HandleInvalidInput("Height is missing.");
+      HandleInvalidInput("Height and request ID are missing.");
+      return true;
+    } else if (tokens.Size() < 5) {
+      HandleInvalidInput("Request ID is missing.");
       return true;
     }
 
@@ -112,24 +115,32 @@ private:
     } else if (tokens[3] != TokenKind::Int) {
       HandleInvalidInput("Height is not an integer.");
       return true;
+    } else if (tokens[4] != TokenKind::Int) {
+      HandleInvalidInput("Request ID is not an integer.");
+      return true;
     }
 
-    if (tokens.Size() != 4) {
-      HandleInvalidInput("Trailing tokens after width and height.");
+    if (tokens.Size() != 5) {
+      HandleInvalidInput("Trailing tokens after request ID.");
       return true;
     }
 
     const std::string w_str(std::string(tokens[2]->data));
     const std::string h_str(std::string(tokens[3]->data));
+    const std::string id_str(std::string(tokens[4]->data));
 
     const int w = std::atoi(w_str.c_str());
     const int h = std::atoi(h_str.c_str());
+    const int id = std::atoi(id_str.c_str());
 
     if (w < 0) {
       HandleInvalidInput("Width is negative.");
       return true;
     } else if (h < 0) {
       HandleInvalidInput("Height is negative.");
+      return true;
+    } else if (id < 0) {
+      HandleInvalidInput("Request ID is negative.");
       return true;
     }
 
@@ -147,7 +158,7 @@ private:
 
     const unsigned char* rgb_ptr = (const unsigned char*)rgb_buf.data();
 
-    m_observer.OnRGBBuffer(rgb_ptr, size_t(w), size_t(h));
+    m_observer.OnRGBBuffer(rgb_ptr, size_t(w), size_t(h), size_t(id));
 
     Advance(line.size(), rgb_buffer_size);
 

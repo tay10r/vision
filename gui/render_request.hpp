@@ -8,6 +8,8 @@ namespace vision::gui {
 /// requests are agregated to form a full frame.
 struct RenderRequest final
 {
+  size_t id = 0;
+
   size_t x_pixel_count = 0;
   size_t y_pixel_count = 0;
 

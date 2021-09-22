@@ -61,8 +61,12 @@ public:
   ///
   /// @param size The number of bytes in the data buffer.
   ///
+  /// @param request_id The ID of the render request that this reply is for.
+  ///
   /// @return True on success, false on failure.
-  virtual bool ReplyRenderRequest(const unsigned char* data, size_t size) = 0;
+  virtual bool ReplyRenderRequest(const unsigned char* data,
+                                  size_t size,
+                                  size_t request_id) = 0;
 
   virtual void NewFrame() = 0;
 

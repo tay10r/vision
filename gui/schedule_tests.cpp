@@ -2,63 +2,76 @@
 
 #include <sstream>
 
+#include "id_generator.hpp"
 #include "schedule.hpp"
 #include "vertex.hpp"
 
 using namespace vision::gui;
 
+namespace {
+
+Schedule
+MakeSchedule(size_t w, size_t h, size_t div_level)
+{
+  IDGenerator id_generator;
+
+  return Schedule(w, h, div_level, id_generator);
+}
+
+} // namespace
+
 TEST(Schedule, GetPartitionCount)
 {
-  Schedule schedule(32, 32, 2);
+  Schedule schedule = MakeSchedule(32, 32, 2);
 
   EXPECT_EQ(schedule.GetPartitionCount(), 16);
 }
 
 TEST(Schedule, GetPreviewCount)
 {
-  Schedule schedule(32, 32, 2);
+  Schedule schedule = MakeSchedule(32, 32, 2);
 
   EXPECT_EQ(schedule.GetPreviewCount(), 2);
 }
 
 TEST(Schedule, GetTextureSize)
 {
-  Schedule schedule(5, 6, 0);
+  Schedule schedule = MakeSchedule(5, 6, 0);
   EXPECT_EQ(schedule.GetTextureWidth(), 5);
   EXPECT_EQ(schedule.GetTextureHeight(), 6);
 }
 
 TEST(Schedule, GetTextureSize2)
 {
-  Schedule schedule(5, 6, 1);
+  Schedule schedule = MakeSchedule(5, 6, 1);
   EXPECT_EQ(schedule.GetTextureWidth(), 6);
   EXPECT_EQ(schedule.GetTextureHeight(), 6);
 }
 
 TEST(Schedule, GetTextureSize3)
 {
-  Schedule schedule(5, 7, 1);
+  Schedule schedule = MakeSchedule(5, 7, 1);
   EXPECT_EQ(schedule.GetTextureWidth(), 6);
   EXPECT_EQ(schedule.GetTextureHeight(), 8);
 }
 
 TEST(Schedule, GetTextureSize4)
 {
-  Schedule schedule(5, 7, 2);
+  Schedule schedule = MakeSchedule(5, 7, 2);
   EXPECT_EQ(schedule.GetTextureWidth(), 8);
   EXPECT_EQ(schedule.GetTextureHeight(), 8);
 }
 
 TEST(Schedule, GetTextureSize5)
 {
-  Schedule schedule(5, 7, 3);
+  Schedule schedule = MakeSchedule(5, 7, 3);
   EXPECT_EQ(schedule.GetTextureWidth(), 8);
   EXPECT_EQ(schedule.GetTextureHeight(), 8);
 }
 
 TEST(Schedule, GetTextureSize6)
 {
-  Schedule schedule(5, 7, 4);
+  Schedule schedule = MakeSchedule(5, 7, 4);
   EXPECT_EQ(schedule.GetTextureWidth(), 16);
   EXPECT_EQ(schedule.GetTextureHeight(), 16);
 }
@@ -82,7 +95,7 @@ TEST(Schedule, GetVertexBuffer)
 {
   static_assert(sizeof(Vertex) == (sizeof(float) * 4));
 
-  Schedule schedule(2, 2, 0);
+  Schedule schedule = MakeSchedule(2, 2, 0);
 
   std::vector<Vertex> vertices = schedule.GetVertexBuffer();
 
@@ -117,21 +130,21 @@ TEST(Schedule, GetVertexBuffer)
 
 TEST(Schedule, GetStride)
 {
-  Schedule schedule(3, 5, 0);
+  Schedule schedule = MakeSchedule(3, 5, 0);
   EXPECT_EQ(schedule.GetVerticalStride(), 1);
   EXPECT_EQ(schedule.GetHorizontalStride(), 1);
 }
 
 TEST(Schedule, GetStride2)
 {
-  Schedule schedule(3, 5, 1);
+  Schedule schedule = MakeSchedule(3, 5, 1);
   EXPECT_EQ(schedule.GetVerticalStride(), 2);
   EXPECT_EQ(schedule.GetHorizontalStride(), 2);
 }
 
 TEST(Schedule, GetStride3)
 {
-  Schedule schedule(11, 13, 2);
+  Schedule schedule = MakeSchedule(11, 13, 2);
   EXPECT_EQ(schedule.GetVerticalStride(), 4);
   EXPECT_EQ(schedule.GetHorizontalStride(), 4);
 }
@@ -181,7 +194,7 @@ PrintRequests(Schedule& schedule)
 
 TEST(Schedule, PopRequest)
 {
-  Schedule schedule(5, 7, 0);
+  Schedule schedule = MakeSchedule(5, 7, 0);
 
   std::string out = PrintRequests(schedule);
 
@@ -190,7 +203,7 @@ TEST(Schedule, PopRequest)
 
 TEST(Schedule, PopRequest2)
 {
-  Schedule schedule(5, 7, 1);
+  Schedule schedule = MakeSchedule(5, 7, 1);
 
   std::string out = PrintRequests(schedule);
 
@@ -203,7 +216,7 @@ TEST(Schedule, PopRequest2)
 
 TEST(Schedule, PopRequest3)
 {
-  Schedule schedule(16, 8, 2);
+  Schedule schedule = MakeSchedule(16, 8, 2);
 
   std::string out = PrintRequests(schedule);
 
@@ -259,7 +272,7 @@ Print(const std::vector<PreviewOperation>& ops)
 
 TEST(Schedule, GetPreviewOperations)
 {
-  Schedule schedule(16, 8, 2);
+  Schedule schedule = MakeSchedule(16, 8, 2);
 
   auto ops = schedule.GetPreviewOperations();
 
@@ -268,7 +281,7 @@ TEST(Schedule, GetPreviewOperations)
 
 TEST(Schedule, GetPreviewOperations2)
 {
-  Schedule schedule(16, 8, 2);
+  Schedule schedule = MakeSchedule(16, 8, 2);
 
   schedule.NextRenderRequest();
 
@@ -279,7 +292,7 @@ TEST(Schedule, GetPreviewOperations2)
 
 TEST(Schedule, GetPreviewOperations3)
 {
-  Schedule schedule(16, 8, 2);
+  Schedule schedule = MakeSchedule(16, 8, 2);
 
   schedule.NextRenderRequest();
   schedule.NextRenderRequest();
@@ -291,7 +304,7 @@ TEST(Schedule, GetPreviewOperations3)
 
 TEST(Schedule, GetPreviewOperations3b)
 {
-  Schedule schedule(16, 8, 2);
+  Schedule schedule = MakeSchedule(16, 8, 2);
 
   schedule.NextRenderRequest();
   schedule.NextRenderRequest();
@@ -304,7 +317,7 @@ TEST(Schedule, GetPreviewOperations3b)
 
 TEST(Schedule, GetPreviewOperations4)
 {
-  Schedule schedule(16, 8, 2);
+  Schedule schedule = MakeSchedule(16, 8, 2);
 
   schedule.NextRenderRequest();
   schedule.NextRenderRequest();
@@ -322,7 +335,7 @@ TEST(Schedule, GetPreviewOperations4)
 
 TEST(Schedule, GetPreviewOperations5)
 {
-  Schedule schedule(16, 8, 2);
+  Schedule schedule = MakeSchedule(16, 8, 2);
 
   schedule.NextRenderRequest();
   schedule.NextRenderRequest();
@@ -341,7 +354,7 @@ TEST(Schedule, GetPreviewOperations5)
 
 TEST(Schedule, GetPreviewOperations6)
 {
-  Schedule schedule(16, 8, 2);
+  Schedule schedule = MakeSchedule(16, 8, 2);
 
   for (int i = 0; i < 16; i++)
     schedule.NextRenderRequest();

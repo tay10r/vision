@@ -24,9 +24,9 @@ public:
 
   void OnBufferOverflow() override { m_output << "BufferOverflow\n"; }
 
-  void OnRGBBuffer(const unsigned char*, size_t w, size_t h) override
+  void OnRGBBuffer(const unsigned char*, size_t w, size_t h, size_t id) override
   {
-    m_output << "RGBBuffer " << w << ' ' << h << '\n';
+    m_output << "RGBBuffer " << w << ' ' << h << ' ' << id << '\n';
   }
 
 private:
@@ -73,7 +73,7 @@ ParseAndLog(const std::string& input);
 
 TEST(Response, RGBBuffer)
 {
-  std::string out = ParseAndLog(BINARY_STRING("rgb buffer 2 3\n"
+  std::string out = ParseAndLog(BINARY_STRING("rgb buffer 2 3 0\n"
                                               "\x00\x11\x00"
                                               "\x00\x55\x00"
                                               "\x22\x00\x33"
@@ -81,56 +81,78 @@ TEST(Response, RGBBuffer)
                                               "\x00\x44\x00"
                                               "\x00\x77\x00"));
 
-  EXPECT_EQ(out, "RGBBuffer 2 3\n");
+  EXPECT_EQ(out, "RGBBuffer 2 3 0\n");
 }
 
 TEST(Response, RGBBuffer_NegativeWidth)
 {
-  std::string out = ParseAndLog(BINARY_STRING("rgb buffer -4 1\n"));
+  std::string out = ParseAndLog(BINARY_STRING("rgb buffer -4 1 0\n"));
 
   EXPECT_EQ(out, "InvalidResponse: Width is negative.\n");
 }
 
 TEST(Response, RGBBuffer_NegativeHeight)
 {
-  std::string out = ParseAndLog(BINARY_STRING("rgb buffer 4 -1\n"));
+  std::string out = ParseAndLog(BINARY_STRING("rgb buffer 4 -1 0\n"));
 
   EXPECT_EQ(out, "InvalidResponse: Height is negative.\n");
 }
 
-TEST(Response, RGBBuffer_MissingHeight)
+TEST(Response, RGBBuffer_NegativeRequestID)
+{
+  std::string out = ParseAndLog(BINARY_STRING("rgb buffer 4 1 -1\n"));
+
+  EXPECT_EQ(out, "InvalidResponse: Request ID is negative.\n");
+}
+
+TEST(Response, RGBBuffer_MissingHeightAndRequestID)
 {
   std::string out = ParseAndLog(BINARY_STRING("rgb buffer 4\n"));
 
-  EXPECT_EQ(out, "InvalidResponse: Height is missing.\n");
+  EXPECT_EQ(out, "InvalidResponse: Height and request ID are missing.\n");
 }
 
-TEST(Response, RGBBuffer_MissingWidth)
+TEST(Response, RGBBuffer_MissingWidthHeightAndRequestID)
 {
   std::string out = ParseAndLog(BINARY_STRING("rgb buffer\n"));
 
-  EXPECT_EQ(out, "InvalidResponse: Width and height are missing.\n");
+  EXPECT_EQ(out,
+            "InvalidResponse: Width, height and request ID are missing.\n");
+}
+
+TEST(Response, RGBBuffer_MissingRequestID)
+{
+  std::string out = ParseAndLog(BINARY_STRING("rgb buffer 0 1\n"));
+
+  EXPECT_EQ(out, "InvalidResponse: Request ID is missing.\n");
 }
 
 TEST(Response, RGBBuffer_HeightIsNotInteger)
 {
-  std::string out = ParseAndLog(BINARY_STRING("rgb buffer 4 ;\n"));
+  std::string out = ParseAndLog(BINARY_STRING("rgb buffer 4 ; 0\n"));
 
   EXPECT_EQ(out, "InvalidResponse: Height is not an integer.\n");
 }
 
 TEST(Response, RGBBuffer_WidthIsNotInteger)
 {
-  std::string out = ParseAndLog(BINARY_STRING("rgb buffer ; 4\n"));
+  std::string out = ParseAndLog(BINARY_STRING("rgb buffer ; 4 0\n"));
 
   EXPECT_EQ(out, "InvalidResponse: Width is not an integer.\n");
 }
 
+TEST(Response, RGBBuffer_RequestIDIsNotInteger)
+{
+  std::string out = ParseAndLog(BINARY_STRING("rgb buffer 4 1 ?\n"));
+
+  EXPECT_EQ(out, "InvalidResponse: Request ID is not an integer.\n");
+}
+
 TEST(Response, RGBBuffer_TrailingTokens)
 {
-  std::string out = ParseAndLog(BINARY_STRING("rgb buffer 1 4 asdf\n"));
+  std::string out = ParseAndLog(BINARY_STRING("rgb buffer 1 4 0 asdf\n"));
 
-  EXPECT_EQ(out, "InvalidResponse: Trailing tokens after width and height.\n");
+  EXPECT_EQ(out, "InvalidResponse: Trailing tokens after request ID.\n");
 }
 
 TEST(Response, UnrecognizedHeader)

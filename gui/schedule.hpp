@@ -8,6 +8,8 @@ namespace vision::gui {
 
 struct Vertex;
 
+class IDGenerator;
+
 /// Describes how to render the results of a render request for a given preview
 /// index.
 struct PreviewOperation final
@@ -26,7 +28,10 @@ struct PreviewOperation final
 class Schedule final
 {
 public:
-  Schedule(size_t w, size_t h, size_t division_level);
+  Schedule(size_t w,
+           size_t h,
+           size_t division_level,
+           IDGenerator& id_generator);
 
   size_t GetRemainingRenderRequests() const noexcept;
 

@@ -20,7 +20,8 @@ public:
 
   virtual void OnRGBBuffer(const unsigned char* buffer,
                            size_t width,
-                           size_t height) = 0;
+                           size_t height,
+                           size_t request_id) = 0;
 };
 
 class ResponseParser

@@ -1,5 +1,6 @@
 #include "view.hpp"
 
+#include "id_generator.hpp"
 #include "resize_request.hpp"
 #include "schedule.hpp"
 #include "vertex.hpp"
@@ -47,12 +48,17 @@ struct RenderReply final
 class FrameBuildContext final
 {
 public:
-  FrameBuildContext(const QSize& size, size_t div_level)
-    : FrameBuildContext(size.width(), size.height(), div_level)
+  FrameBuildContext(const QSize& size,
+                    size_t div_level,
+                    IDGenerator& id_generator)
+    : FrameBuildContext(size.width(), size.height(), div_level, id_generator)
   {}
 
-  FrameBuildContext(size_t w, size_t h, size_t div_level)
-    : m_schedule(w, h, div_level)
+  FrameBuildContext(size_t w,
+                    size_t h,
+                    size_t div_level,
+                    IDGenerator& id_generator)
+    : m_schedule(w, h, div_level, id_generator)
     , m_vertex_buffer(QOpenGLBuffer::VertexBuffer)
   {
     InitVertexBuffer();
@@ -173,7 +179,8 @@ public:
   {
     makeCurrent();
 
-    m_frame_build_context.reset(new FrameBuildContext(size(), m_div_level));
+    m_frame_build_context.reset(
+      new FrameBuildContext(size(), m_div_level, m_id_generator));
 
     doneCurrent();
 
@@ -190,12 +197,17 @@ public:
       return m_frame_build_context->GetRenderRequest();
   }
 
-  bool ReplyRenderRequest(const unsigned char* data, size_t size) override
+  bool ReplyRenderRequest(const unsigned char* data,
+                          size_t size,
+                          size_t request_id) override
   {
     makeCurrent();
 
     const RenderRequest req = GetCurrentRenderRequest();
     if (!req.IsValid())
+      return false;
+
+    if (req.id != request_id)
       return false;
 
     size_t req_size = req.x_pixel_count * req.y_pixel_count * 3;
@@ -398,7 +410,9 @@ private:
 
   QOpenGLShaderProgram m_program;
 
-  size_t m_div_level = 4;
+  size_t m_div_level = 3;
+
+  IDGenerator m_id_generator;
 };
 
 } // namespace

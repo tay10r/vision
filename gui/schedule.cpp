@@ -1,5 +1,6 @@
 #include "schedule.hpp"
 
+#include "id_generator.hpp"
 #include "vertex.hpp"
 
 #include <set>
@@ -49,7 +50,10 @@ Log4(size_t n)
 
 } // namespace
 
-Schedule::Schedule(size_t w, size_t h, size_t division_level)
+Schedule::Schedule(size_t w,
+                   size_t h,
+                   size_t division_level,
+                   IDGenerator& id_generator)
   : m_width(w)
   , m_height(h)
   , m_division_level(division_level)
@@ -64,7 +68,7 @@ Schedule::Schedule(size_t w, size_t h, size_t division_level)
 
   const size_t div_count = GetDivisionsPerDimension();
 
-  for (size_t i = 0; i < m_division_level; i++) {
+  for (size_t i = 0; i <= m_division_level; i++) {
 
     const size_t j_max = (1 << i) * (1 << i);
 
@@ -81,7 +85,8 @@ Schedule::Schedule(size_t w, size_t h, size_t division_level)
       const size_t x_cnt = (div_count > 1) ? x_pixel_count - 1 : x_pixel_count;
       const size_t y_cnt = (div_count > 1) ? y_pixel_count - 1 : y_pixel_count;
 
-      const RenderRequest req{ x_cnt,
+      const RenderRequest req{ id_generator.GenerateID(),
+                               x_cnt,
                                y_cnt,
                                ReverseInterleaveX(index),
                                ReverseInterleaveY(index),

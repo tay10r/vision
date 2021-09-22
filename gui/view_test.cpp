@@ -47,8 +47,9 @@ struct Circle final
   }
 };
 
-std::vector<unsigned char>
-HandleRenderRequest(const vision::gui::RenderRequest& req)
+void
+HandleRenderRequest(const vision::gui::RenderRequest& req,
+                    vision::gui::View& view)
 {
   std::vector<unsigned char> buffer(req.x_pixel_count * req.y_pixel_count * 3);
 
@@ -79,7 +80,7 @@ HandleRenderRequest(const vision::gui::RenderRequest& req)
     }
   }
 
-  return buffer;
+  view.ReplyRenderRequest(buffer.data(), buffer.size(), req.id);
 }
 
 class ViewObserver final : public vision::gui::ViewObserver
@@ -137,9 +138,7 @@ main(int argc, char** argv)
 
     PrintRenderRequest(req);
 
-    std::vector<unsigned char> buf = HandleRenderRequest(req);
-
-    view->ReplyRenderRequest(buf.data(), buf.size());
+    HandleRenderRequest(req, *view);
   });
 
   timer.start(50);

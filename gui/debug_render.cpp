@@ -325,7 +325,7 @@ private:
     std::ostringstream header_stream;
 
     header_stream << "rgb buffer " << req.x_pixel_count << ' '
-                  << req.y_pixel_count << '\n';
+                  << req.y_pixel_count << ' ' << req.id << '\n';
 
     std::string header = header_stream.str();
 

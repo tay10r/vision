@@ -157,9 +157,12 @@ private:
     DisconnectDueToError();
   }
 
-  void OnRGBBuffer(const unsigned char* buffer, size_t w, size_t h) override
+  void OnRGBBuffer(const unsigned char* buffer,
+                   size_t w,
+                   size_t h,
+                   size_t request_id) override
   {
-    if (!m_view->ReplyRenderRequest(buffer, w * h * 3)) {
+    if (!m_view->ReplyRenderRequest(buffer, w * h * 3, request_id)) {
       // This can happen when the window has been resized since the render
       // request was issued. It should not be considered an error.
 #if 0
