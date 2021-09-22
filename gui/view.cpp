@@ -1,5 +1,6 @@
 #include "view.hpp"
 
+#include "resize_request.hpp"
 #include "schedule.hpp"
 #include "vertex.hpp"
 
@@ -121,6 +122,14 @@ public:
     return x_max * y_max * 6;
   }
 
+  ResizeRequest MakeResizeRequest() const
+  {
+    return ResizeRequest{ m_schedule.GetFrameWidth(),
+                          m_schedule.GetFrameHeight(),
+                          m_schedule.GetTextureWidth(),
+                          m_schedule.GetTextureHeight() };
+  }
+
   QOpenGLBuffer& GetVertexBuffer() { return m_vertex_buffer; }
 
   RenderRequest GetRenderRequest() { return m_schedule.GetRenderRequest(); }
@@ -189,6 +198,14 @@ public:
   }
 
   ~ViewImpl() { makeCurrent(); }
+
+  ResizeRequest MakeResizeRequest() const override
+  {
+    if (!m_frame_build_context)
+      return ResizeRequest{};
+
+    return m_frame_build_context->MakeResizeRequest();
+  }
 
   bool HasRenderRequest() const override
   {
@@ -355,7 +372,10 @@ CreateView(ViewObserver& observer, QWidget* parent)
 void
 View::NotifyResize()
 {
-  m_observer.OnViewResize();
+  const ResizeRequest req = MakeResizeRequest();
+
+  m_observer.OnViewResize(
+    req.width, req.height, req.padded_width, req.padded_height);
 }
 
 } // namespace vision::gui

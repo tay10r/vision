@@ -64,16 +64,17 @@ Schedule::Schedule(size_t w, size_t h, size_t division_level)
 
   const size_t div_count = GetDivisionsPerDimension();
 
-  const size_t j_max = div_count * div_count;
+  for (size_t i = 0; i < m_division_level; i++) {
 
-  for (size_t i = 0; i < div_count; i++) {
+    const size_t j_max = (1 << i) * (1 << i);
 
-    const size_t j_stride = j_max / ((i + 1) * (i + 1));
+    const size_t stride = (div_count * div_count) / j_max;
 
-    for (size_t j = 0; j < j_max; j += j_stride) {
+    for (size_t j = 0; j < j_max; j++) {
 
-      const bool exists = (indices.find(j) != indices.end());
+      const size_t index = j * stride;
 
+      const bool exists = (indices.find(index) != indices.end());
       if (exists)
         continue;
 
@@ -82,8 +83,8 @@ Schedule::Schedule(size_t w, size_t h, size_t division_level)
 
       const RenderRequest req{ x_cnt,
                                y_cnt,
-                               ReverseInterleaveX(j),
-                               ReverseInterleaveY(j),
+                               ReverseInterleaveX(index),
+                               ReverseInterleaveY(index),
                                x_pixel_stride,
                                y_pixel_stride,
                                m_width,
@@ -91,7 +92,7 @@ Schedule::Schedule(size_t w, size_t h, size_t division_level)
 
       m_render_requests.emplace_back(req);
 
-      indices.emplace(j);
+      indices.emplace(index);
     }
   }
 }
@@ -153,22 +154,24 @@ Schedule::GetPreviewOperations() const
 
   const size_t div_count = 1 << GetPreviewIndex();
 
-  const size_t j_max = div_count * div_count;
-
   std::set<size_t> indices;
 
   for (size_t i = 0; i < div_count; i++) {
 
-    const size_t j_stride = j_max / ((i + 1) * (i + 1));
+    const size_t j_max = (1 << i) * (1 << i);
 
-    for (size_t j = 0; j < j_max; j += j_stride) {
+    const size_t stride = (div_count * div_count) / j_max;
 
-      const bool exists = (indices.find(j) != indices.end());
+    for (size_t j = 0; j < j_max; j++) {
+
+      const size_t index = j * stride;
+
+      const bool exists = (indices.find(index) != indices.end());
       if (exists)
         continue;
 
-      const size_t x_pixel_offset = ReverseInterleaveX(j);
-      const size_t y_pixel_offset = ReverseInterleaveY(j);
+      const size_t x_pixel_offset = ReverseInterleaveX(index);
+      const size_t y_pixel_offset = ReverseInterleaveY(index);
 
       const PreviewOperation op{
         x_pixel_offset, y_pixel_offset, div_count, div_count
@@ -176,7 +179,7 @@ Schedule::GetPreviewOperations() const
 
       operations.emplace_back(op);
 
-      indices.emplace(j);
+      indices.emplace(index);
     }
   }
 

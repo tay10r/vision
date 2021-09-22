@@ -1,6 +1,7 @@
 #include "debug_render.hpp"
 
 #include "render_request.hpp"
+#include "resize_request.hpp"
 
 #include <QObject>
 #include <QTimer>
@@ -113,10 +114,22 @@ public:
     QTimer::singleShot(10, this, &RenderConnection::HandleFirstRenderRequest);
   }
 
-  void Resize(size_t w, size_t h) override
+  void Resize(const ResizeRequest& req) override
   {
-    m_width = std::max(w, size_t(1));
-    m_height = std::max(h, size_t(1));
+    m_width = std::max(req.width, size_t(1));
+
+    m_height = std::max(req.height, size_t(1));
+
+    m_padded_width = std::max(req.padded_width, size_t(1));
+
+    m_padded_height = std::max(req.padded_height, size_t(1));
+
+    m_rngs.clear();
+
+    std::mt19937 seed_rng(1234 * req.padded_width * req.padded_height);
+
+    for (size_t i = 0; i < (req.padded_width * req.padded_height); i++)
+      m_rngs.emplace_back(seed_rng());
   }
 
 protected slots:
@@ -131,6 +144,11 @@ protected slots:
   }
 
 private:
+  std::minstd_rand& GetRng(size_t x, size_t y)
+  {
+    return m_rngs[(y * m_padded_width) + x];
+  }
+
   Ray GenerateRay(size_t x, size_t y)
   {
     const float u_min = (x + 0.0f) / m_width;
@@ -142,8 +160,10 @@ private:
     std::uniform_real_distribution<float> u_dist(u_min, u_max);
     std::uniform_real_distribution<float> v_dist(v_min, v_max);
 
-    const float u = u_dist(m_rng);
-    const float v = v_dist(m_rng);
+    auto& rng = GetRng(x, y);
+
+    const float u = u_dist(rng);
+    const float v = v_dist(rng);
 
     const float aspect = float(m_width) / m_height;
 
@@ -171,16 +191,18 @@ private:
     return lo + ((hi - lo) * level);
   }
 
-  QVector3D Trace(const Ray& ray, size_t depth = 0)
+  template<typename Rng>
+  QVector3D Trace(const Ray& ray, Rng& rng, size_t depth = 0)
   {
     Hit hit = IntersectScene(ray);
     if (!hit)
       return OnMiss(ray);
     else
-      return Shade(ray, hit, depth);
+      return Shade(ray, hit, rng, depth);
   }
 
-  QVector3D Shade(const Ray& ray, const Hit& hit, size_t depth)
+  template<typename Rng>
+  QVector3D Shade(const Ray& ray, const Hit& hit, Rng& rng, size_t depth)
   {
     if (depth > 2)
       return hit.emission;
@@ -190,9 +212,9 @@ private:
     const QVector3D hit_pos =
       ray.org + (ray.dir * (hit.distance - shadow_bias));
 
-    const Ray second_ray{ hit_pos, SampleHemisphere(hit.normal) };
+    const Ray second_ray{ hit_pos, SampleHemisphere(hit.normal, rng) };
 
-    return (hit.diffuse * Trace(second_ray, depth + 1)) + hit.emission;
+    return (hit.diffuse * Trace(second_ray, rng, depth + 1)) + hit.emission;
   }
 
   Hit IntersectScene(const Ray& ray) const
@@ -210,13 +232,14 @@ private:
     return closest;
   }
 
-  QVector3D SampleUnitSphere()
+  template<typename Rng>
+  QVector3D SampleUnitSphere(Rng& rng)
   {
     std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
 
     for (size_t i = 0; i < 128; i++) {
 
-      QVector3D v(dist(m_rng), dist(m_rng), dist(m_rng));
+      QVector3D v(dist(rng), dist(rng), dist(rng));
 
       if (QVector3D::dotProduct(v, v) <= 1)
         return v.normalized();
@@ -225,11 +248,12 @@ private:
     return QVector3D(0, 1, 0);
   }
 
-  QVector3D SampleHemisphere(const QVector3D& dir)
+  template<typename Rng>
+  QVector3D SampleHemisphere(const QVector3D& dir, Rng& rng)
   {
     for (size_t i = 0; i < 128; i++) {
 
-      QVector3D v = SampleUnitSphere();
+      QVector3D v = SampleUnitSphere(rng);
 
       if (QVector3D::dotProduct(v, dir) >= 0)
         return v;
@@ -240,13 +264,15 @@ private:
 
   QVector3D RenderPixel(size_t x, size_t y)
   {
+    auto& rng = GetRng(x, y);
+
     QVector3D color(0, 0, 0);
 
     for (size_t i = 0; i < spp; i++) {
 
       const Ray primary_ray = GenerateRay(x, y);
 
-      color = color + Trace(primary_ray);
+      color = color + Trace(primary_ray, rng);
     }
 
     return color * (1.0f / spp);
@@ -257,11 +283,16 @@ private:
     std::vector<unsigned char> buffer(req.x_pixel_count * req.y_pixel_count *
                                       3);
 
-    for (size_t y = 0; y < req.y_pixel_count; y++) {
+#pragma omp parallel for
+
+    for (long y = 0; y < long(req.y_pixel_count); y++) {
 
       for (size_t x = 0; x < req.x_pixel_count; x++) {
 
-        const QVector3D color = RenderPixel(req.GetFrameX(x), req.GetFrameY(y));
+        size_t frame_x = req.GetFrameX(x);
+        size_t frame_y = req.GetFrameY(y);
+
+        const QVector3D color = RenderPixel(frame_x, frame_y);
 
         size_t buffer_offset = ((y * req.x_pixel_count) + x) * 3;
 
@@ -314,11 +345,15 @@ private:
 
   ConnectionObserver& m_observer;
 
-  std::mt19937 m_rng{ 1234 };
+  std::vector<std::minstd_rand> m_rngs;
 
   size_t m_width = 1;
 
   size_t m_height = 1;
+
+  size_t m_padded_width = 1;
+
+  size_t m_padded_height = 1;
 
   size_t spp = 256;
 };

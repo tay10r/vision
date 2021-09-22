@@ -85,7 +85,7 @@ HandleRenderRequest(const vision::gui::RenderRequest& req)
 class ViewObserver final : public vision::gui::ViewObserver
 {
 public:
-  void OnViewResize() override {}
+  void OnViewResize(size_t, size_t, size_t, size_t) override {}
 };
 
 } // namespace
@@ -117,7 +117,7 @@ main(int argc, char** argv)
 
   main_window.setCentralWidget(view);
 
-  view->SetDivisionLevel(2);
+  view->SetDivisionLevel(4);
 
   QTimer timer(&main_window);
 

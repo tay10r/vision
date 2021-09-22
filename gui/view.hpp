@@ -9,13 +9,17 @@
 namespace vision::gui {
 
 struct RenderRequest;
+struct ResizeRequest;
 
 class ViewObserver
 {
 public:
   virtual ~ViewObserver() = default;
 
-  virtual void OnViewResize() = 0;
+  virtual void OnViewResize(size_t w,
+                            size_t h,
+                            size_t padded_w,
+                            size_t padded_h) = 0;
 };
 
 class View : public QOpenGLWidget
@@ -27,6 +31,8 @@ public:
   {}
 
   virtual ~View() = default;
+
+  virtual ResizeRequest MakeResizeRequest() const = 0;
 
   virtual bool HasRenderRequest() const = 0;
 

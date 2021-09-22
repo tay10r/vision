@@ -32,7 +32,7 @@ public:
 
   void Render(const RenderRequest&) override {}
 
-  void Resize(size_t, size_t) override {}
+  void Resize(const ResizeRequest&) override {}
 
 private:
   ConnectionObserver& m_observer;
@@ -65,7 +65,7 @@ public:
 
   void Render(const RenderRequest&) override {}
 
-  void Resize(size_t, size_t) override {}
+  void Resize(const ResizeRequest&) override {}
 
 protected slots:
   void SendRandomData()
@@ -111,7 +111,7 @@ public:
 
   void Render(const RenderRequest&) override {}
 
-  void Resize(size_t, size_t) override {}
+  void Resize(const ResizeRequest&) override {}
 
 private:
   ConnectionObserver& m_observer;

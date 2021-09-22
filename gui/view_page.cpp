@@ -4,6 +4,7 @@
 #include "connection.hpp"
 #include "controller.hpp"
 #include "monitor.hpp"
+#include "resize_request.hpp"
 #include "response.hpp"
 #include "schedule.hpp"
 #include "view.hpp"
@@ -38,12 +39,17 @@ public:
   }
 
 private:
-  void OnViewResize() override
+  void OnViewResize(size_t w,
+                    size_t h,
+                    size_t padded_w,
+                    size_t padded_h) override
   {
     if (!m_connection)
       return;
 
-    IssueResize();
+    ResizeRequest resize_req{ w, h, padded_w, padded_h };
+
+    IssueResize(resize_req);
 
     IssueRenderRequest();
   }
@@ -65,17 +71,12 @@ private:
   {
     m_response_parser = ResponseParser::Create(*this);
 
-    IssueResize();
+    IssueResize(m_view->MakeResizeRequest());
 
     IssueRenderRequest();
   }
 
-  void IssueResize()
-  {
-    const QSize view_size = m_view->size();
-
-    m_connection->Resize(view_size.width(), view_size.height());
-  }
+  void IssueResize(const ResizeRequest& req) { m_connection->Resize(req); }
 
   void IssueRenderRequest()
   {

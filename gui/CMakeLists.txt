@@ -4,6 +4,8 @@ project(vision)
 
 find_package(Qt5 REQUIRED COMPONENTS Widgets Network Charts)
 
+find_package(OpenMP REQUIRED COMPONENTS CXX)
+
 set(controller_sources
   fake_controller.hpp
   fake_controller.cpp)
@@ -35,7 +37,7 @@ add_library(vision_gui SHARED
 
 target_compile_features(vision_gui PUBLIC cxx_std_17)
 
-target_link_libraries(vision_gui PUBLIC Qt5::Widgets Qt5::Network Qt5::Charts)
+target_link_libraries(vision_gui PUBLIC Qt5::Widgets Qt5::Network Qt5::Charts OpenMP::OpenMP_CXX)
 
 if(NOT MSVC)
   target_compile_options(vision_gui PRIVATE -Wall -Wextra -Werror -Wfatal-errors)

@@ -5,6 +5,7 @@
 namespace vision::gui {
 
 struct RenderRequest;
+struct ResizeRequest;
 
 class ConnectionObserver
 {
@@ -29,7 +30,7 @@ public:
 
   virtual bool Connect() = 0;
 
-  virtual void Resize(size_t w, size_t h) = 0;
+  virtual void Resize(const ResizeRequest&) = 0;
 
   virtual void Render(const RenderRequest&) = 0;
 };
