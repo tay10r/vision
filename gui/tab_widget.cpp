@@ -1,4 +1,4 @@
-#include "central_widget.hpp"
+#include "tab_widget.hpp"
 
 #include "controller.hpp"
 #include "page.hpp"
@@ -23,10 +23,10 @@ public:
   }
 };
 
-class CentralWidget : public QTabWidget
+class TabWidget : public QTabWidget
 {
 public:
-  CentralWidget(QWidget* parent, Controller& controller)
+  TabWidget(QWidget* parent, Controller& controller)
     : QTabWidget(parent)
     , m_controller(controller)
   {
@@ -40,8 +40,7 @@ public:
 
     setMovable(true);
 
-    connect(
-      this, &QTabWidget::tabBarClicked, this, &CentralWidget::OnTabClicked);
+    connect(this, &QTabWidget::tabBarClicked, this, &TabWidget::OnTabClicked);
   }
 
 protected slots:
@@ -81,9 +80,9 @@ private:
 } // namespace
 
 QWidget*
-CreateCentralWidget(QWidget* parent, Controller& controller)
+CreateTabWidget(QWidget* parent, Controller& controller)
 {
-  return new CentralWidget(parent, controller);
+  return new TabWidget(parent, controller);
 }
 
 } // namespace vision::gui

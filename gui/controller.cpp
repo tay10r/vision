@@ -1,5 +1,6 @@
-#include "fake_controller.hpp"
+#include "controller.hpp"
 
+#include "address_bar.hpp"
 #include "connection.hpp"
 #include "controller.hpp"
 #include "debug_render.hpp"
@@ -9,6 +10,7 @@
 #include <sstream>
 #include <vector>
 
+#include <QFileSystemModel>
 #include <QObject>
 #include <QString>
 #include <QStringListModel>
@@ -156,6 +158,18 @@ private:
 class ConnectionFactory final
 {
 public:
+  ConnectionFactory()
+  {
+    QStringList debug_items;
+    debug_items << "bad_connection";
+    debug_items << "render";
+    debug_items << "buffer_overflow";
+    debug_items << "invalid_response";
+    m_debug_item_model.setStringList(debug_items);
+
+    m_fs_model.setRootPath("/");
+  }
+
   auto CreateConnection(const QString& urlString, ConnectionObserver& observer)
     -> std::unique_ptr<Connection>
   {
@@ -180,6 +194,13 @@ public:
 
     return connection;
   }
+
+  auto GetDebugItemModel() -> QAbstractItemModel*
+  {
+    return &m_debug_item_model;
+  }
+
+  auto GetFSModel() -> QAbstractItemModel* { return &m_fs_model; }
 
 private:
   using ConnectionPtr = std::unique_ptr<Connection>;
@@ -213,24 +234,36 @@ private:
 
     return nullptr;
   }
+
+private:
+  QStringListModel m_debug_item_model;
+
+  QFileSystemModel m_fs_model;
 };
 
-class FakeController final
+class ControllerImpl final
   : public Controller
   , public QObject
 {
 public:
-  QAbstractItemModel* GetURLsModel() override { return urls_model.GetModel(); }
-
   auto CreateConnection(const QString& url, ConnectionObserver& observer)
     -> std::unique_ptr<Connection> override
   {
     return m_connection_factory.CreateConnection(url, observer);
   }
 
-private:
-  URLsModel urls_model;
+  auto CreateAddressBarFactory() -> std::unique_ptr<AddressBarFactory> override
+  {
+    auto factory = AddressBarFactory::Create();
 
+    factory->AddScheme("debug", m_connection_factory.GetDebugItemModel());
+
+    factory->AddScheme("file", m_connection_factory.GetFSModel());
+
+    return factory;
+  }
+
+private:
   ConnectionFactory m_connection_factory;
 };
 
@@ -239,7 +272,7 @@ private:
 std::unique_ptr<Controller>
 Controller::Create()
 {
-  return std::unique_ptr<Controller>(new FakeController());
+  return std::unique_ptr<Controller>(new ControllerImpl());
 }
 
 } // namespace vision::gui

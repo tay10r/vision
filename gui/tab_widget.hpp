@@ -7,6 +7,6 @@ namespace vision::gui {
 class Controller;
 
 QWidget*
-CreateCentralWidget(QWidget* parent, Controller&);
+CreateTabWidget(QWidget* parent, Controller&);
 
 } // namespace vision::gui

@@ -26,7 +26,7 @@ class Page final
 public:
   Page(QWidget* parent, Controller& controller)
     : QWidget(parent)
-    , m_address_bar(CreateAddressBar(this, controller.GetURLsModel(), *this))
+    , m_address_bar(CreateAddressBar(controller))
     , m_controller(controller)
   {
     m_layout.addWidget(m_address_bar);
@@ -182,8 +182,17 @@ private:
     m_connection.reset();
   }
 
+  QWidget* CreateAddressBar(Controller& controller)
+  {
+    auto factory = controller.CreateAddressBarFactory();
+
+    factory->AddObserver(this);
+
+    return factory->CreateAddressBar(this);
+  }
+
 private:
-  QWidget* m_address_bar;
+  QWidget* m_address_bar = nullptr;
 
   View* m_view{ CreateView(*this, this) };
 

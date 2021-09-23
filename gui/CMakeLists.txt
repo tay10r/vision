@@ -6,15 +6,15 @@ find_package(Qt5 REQUIRED COMPONENTS Widgets Network Charts)
 
 find_package(OpenMP REQUIRED COMPONENTS CXX)
 
-set(controller_sources
-  fake_controller.hpp
-  fake_controller.cpp)
-
-add_library(vision_gui SHARED
+add_library(vision_gui
+  auto_complete_engine.hpp
+  auto_complete_engine.cpp
   address_bar.hpp
   address_bar.cpp
-  central_widget.hpp
-  central_widget.cpp
+  controller.hpp
+  controller.cpp
+  tab_widget.hpp
+  tab_widget.cpp
   debug_render.hpp
   debug_render.cpp
   debug_input.hpp
@@ -35,8 +35,7 @@ add_library(vision_gui SHARED
   lexer.cpp
   token.hpp
   token.cpp
-  ${controller_sources}
-  resources.qrc)
+  shaders.qrc)
 
 set_target_properties(vision_gui
   PROPERTIES
@@ -62,6 +61,10 @@ endif(NOT MSVC)
 
 target_link_libraries(vision PUBLIC vision::gui)
 
+set_target_properties(vision
+  PROPERTIES
+    AUTORCC ON)
+
 #############
 # View Test #
 #############
@@ -71,6 +74,7 @@ if(VISION_TESTS)
   find_package(GTest REQUIRED)
 
   add_executable(vision_gui_tests
+    auto_complete_engine_tests.cpp
     response_tests.cpp
     schedule_tests.cpp
     lexer_tests.cpp)
