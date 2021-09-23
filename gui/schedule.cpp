@@ -288,6 +288,15 @@ Schedule::GetRenderRequest() const
     return m_render_requests[m_render_request_index];
 }
 
+RenderRequest
+Schedule::GetRenderRequest(size_t index) const
+{
+  if (index >= m_render_requests.size())
+    return RenderRequest();
+  else
+    return m_render_requests[index];
+}
+
 void
 Schedule::NextRenderRequest()
 {

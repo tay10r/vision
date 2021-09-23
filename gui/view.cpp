@@ -138,8 +138,8 @@ private:
 class ViewImpl : public View
 {
 public:
-  ViewImpl(ViewObserver& observer, QWidget* parent)
-    : View(observer, parent)
+  ViewImpl(QWidget* parent)
+    : View(parent)
   {
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
@@ -149,6 +149,14 @@ public:
   }
 
   ~ViewImpl() { makeCurrent(); }
+
+  auto GetSchedule() const -> const Schedule* override
+  {
+    if (m_frame_build_context)
+      return &m_frame_build_context->GetSchedule();
+    else
+      return nullptr;
+  }
 
   ResizeRequest MakeResizeRequest() const override
   {
@@ -400,9 +408,9 @@ protected:
   {
     context()->functions()->glViewport(0, 0, w, h);
 
-    NewFrame();
-
     NotifyResize();
+
+    NewFrame();
   }
 
 private:
@@ -418,9 +426,9 @@ private:
 } // namespace
 
 View*
-CreateView(ViewObserver& observer, QWidget* parent)
+CreateView(QWidget* parent)
 {
-  return new ViewImpl(observer, parent);
+  return new ViewImpl(parent);
 }
 
 void
@@ -428,14 +436,17 @@ View::NotifyResize()
 {
   const ResizeRequest req = MakeResizeRequest();
 
-  m_observer.OnViewResize(
-    req.width, req.height, req.padded_width, req.padded_height);
+  if (m_observer) {
+    m_observer->OnResize(
+      req.width, req.height, req.padded_width, req.padded_height);
+  }
 }
 
 void
 View::NotifyKeyEvent(const QString& key_text, bool state)
 {
-  m_observer.OnViewKeyEvent(key_text, state);
+  if (m_observer)
+    m_observer->OnKeyEvent(key_text, state);
 }
 
 void
@@ -444,19 +455,24 @@ View::NotifyMouseButtonEvent(const QString& button_name,
                              int y,
                              bool state)
 {
-  m_observer.OnViewMouseButtonEvent(button_name, x, y, state);
+  if (m_observer)
+    m_observer->OnMouseButtonEvent(button_name, x, y, state);
 }
 
 void
 View::NotifyMouseMoveEvent(int x, int y)
 {
-  m_observer.OnViewMouseMoveEvent(x, y);
+  if (m_observer)
+    m_observer->OnMouseMoveEvent(x, y);
 }
 
 void
 View::NotifyNewFrame()
 {
-  m_observer.OnNewViewFrame();
+  const Schedule* schedule = GetSchedule();
+
+  if (schedule && m_observer)
+    m_observer->OnNewFrame(*schedule);
 }
 
 } // namespace vision::gui

@@ -3,12 +3,13 @@
 #include <QComboBox>
 #include <QCompleter>
 #include <QFileSystemModel>
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QLineEdit>
+#include <QMenu>
 #include <QPushButton>
 #include <QString>
 #include <QStringListModel>
-#include <QWidget>
 
 #include <vector>
 
@@ -29,7 +30,7 @@ struct Address final
   QString data;
 };
 
-class AddressBar : public QWidget
+class AddressBar : public QFrame
 {
   Q_OBJECT
 public:
@@ -57,6 +58,8 @@ protected:
 
   static AddressKind GetAddressKind(const QString&);
 
+  void OpenStyleSheetEditor();
+
 private:
   QHBoxLayout m_layout{ this };
 
@@ -74,11 +77,13 @@ private:
 
   QCompleter m_completer{ this };
 
-  QStringListModel m_debug_item_model;
+  QStringListModel m_debug_item_model{ this };
 
-  QFileSystemModel m_fs_model;
+  QFileSystemModel m_fs_model{ this };
 
-  QStringListModel m_tcp_item_model;
+  QStringListModel m_tcp_item_model{ this };
+
+  QMenu m_menu{ this };
 
   std::vector<Address> m_history;
 };

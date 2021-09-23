@@ -83,26 +83,14 @@ HandleRenderRequest(const vision::gui::RenderRequest& req,
   view.ReplyRenderRequest(buffer.data(), buffer.size(), req.id);
 }
 
-class ViewObserver final : public vision::gui::ViewObserver
-{
-public:
-  void OnViewResize(size_t, size_t, size_t, size_t) override {}
-
-  void OnNewViewFrame() override {}
-
-  void OnViewKeyEvent(const QString&, bool) override {}
-
-  void OnViewMouseButtonEvent(const QString&, int, int, bool) override {}
-
-  void OnViewMouseMoveEvent(int, int) override {}
-};
-
 } // namespace
 
 int
 main(int argc, char** argv)
 {
   QApplication app(argc, argv);
+
+  Q_INIT_RESOURCE(shaders);
 
 #if 0
   QSurfaceFormat format;
@@ -119,10 +107,7 @@ main(int argc, char** argv)
 
   main_window.show();
 
-  ViewObserver view_observer;
-
-  vision::gui::View* view =
-    vision::gui::CreateView(view_observer, &main_window);
+  vision::gui::View* view = vision::gui::CreateView(&main_window);
 
   main_window.setCentralWidget(view);
 

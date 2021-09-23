@@ -9,6 +9,8 @@ find_package(OpenMP REQUIRED COMPONENTS CXX)
 add_library(vision_gui
   address_bar.hpp
   address_bar.cpp
+  connection_view_proxy.hpp
+  connection_view_proxy.cpp
   debug_connection.hpp
   debug_connection.cpp
   debug_render.hpp

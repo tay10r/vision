@@ -13,34 +13,35 @@ namespace vision::gui {
 struct RenderRequest;
 struct ResizeRequest;
 
+class Schedule;
+
 class ViewObserver
 {
 public:
   virtual ~ViewObserver() = default;
 
-  virtual void OnViewResize(size_t w,
-                            size_t h,
-                            size_t padded_w,
-                            size_t padded_h) = 0;
+  virtual void OnKeyEvent(const QString& key, bool state) = 0;
 
-  virtual void OnViewKeyEvent(const QString& key, bool state) = 0;
+  virtual void OnMouseButtonEvent(const QString& button,
+                                  int x,
+                                  int y,
+                                  bool state) = 0;
 
-  virtual void OnViewMouseButtonEvent(const QString& button,
-                                      int x,
-                                      int y,
-                                      bool state) = 0;
+  virtual void OnMouseMoveEvent(int x, int y) = 0;
 
-  virtual void OnViewMouseMoveEvent(int x, int y) = 0;
+  virtual void OnNewFrame(const Schedule&) = 0;
 
-  virtual void OnNewViewFrame() = 0;
+  virtual void OnResize(size_t w,
+                        size_t h,
+                        size_t padded_w,
+                        size_t padded_h) = 0;
 };
 
 class View : public QOpenGLWidget
 {
 public:
-  View(ViewObserver& observer, QWidget* parent)
+  View(QWidget* parent)
     : QOpenGLWidget(parent)
-    , m_observer(observer)
   {}
 
   virtual ~View() = default;
@@ -77,6 +78,8 @@ public:
   /// if the window is resized.
   virtual bool NeedsNewFrame() = 0;
 
+  void SetObserver(ViewObserver* observer) { m_observer = observer; }
+
 protected:
   void NotifyResize();
 
@@ -91,11 +94,13 @@ protected:
 
   void NotifyNewFrame();
 
+  virtual auto GetSchedule() const -> const Schedule* = 0;
+
 private:
-  ViewObserver& m_observer;
+  ViewObserver* m_observer = nullptr;
 };
 
 View*
-CreateView(ViewObserver& observer, QWidget* parent);
+CreateView(QWidget* parent);
 
 } // namespace vision::gui

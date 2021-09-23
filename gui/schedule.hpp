@@ -65,6 +65,8 @@ public:
 
   std::vector<Vertex> GetVertexBuffer() const;
 
+  RenderRequest GetRenderRequest(size_t index) const;
+
   RenderRequest GetRenderRequest() const;
 
   void NextRenderRequest();

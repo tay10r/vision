@@ -111,7 +111,8 @@ public:
   {
     m_render_requests.emplace_back(req);
 
-    QTimer::singleShot(0, this, &RenderConnection::HandleFirstRenderRequest);
+    if (m_render_requests.size() == 1)
+      QTimer::singleShot(0, this, &RenderConnection::HandleFirstRenderRequest);
   }
 
   void Resize(const ResizeRequest& req) override
@@ -130,6 +131,8 @@ public:
 
     for (size_t i = 0; i < (req.padded_width * req.padded_height); i++)
       m_rngs.emplace_back(seed_rng());
+
+    m_render_requests.clear();
   }
 
   void SendKey(const std::string_view&, bool) override {}

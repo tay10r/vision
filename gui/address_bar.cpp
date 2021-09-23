@@ -1,25 +1,85 @@
 #include "address_bar.hpp"
 
+#include <QApplication>
+#include <QDialog>
+#include <QTextEdit>
+#include <QVBoxLayout>
+
+#include <fstream>
+
 namespace vision::gui {
 
-AddressBar::AddressBar(QWidget* parent)
-  : QWidget(parent)
+namespace {
+
+class StyleSheetEditor final : public QDialog
 {
+public:
+  StyleSheetEditor()
+  {
+    setWindowTitle("Style Sheet Editor");
+
+    resize(640, 720);
+
+    setLayout(&m_layout);
+
+    m_layout.addWidget(&m_text_edit);
+
+    m_layout.addWidget(&m_apply_button);
+
+    m_text_edit.insertPlainText(qApp->styleSheet());
+
+    connect(&m_apply_button,
+            &QPushButton::clicked,
+            this,
+            &StyleSheetEditor::ApplyStyleSheet);
+  }
+
+protected slots:
+  void ApplyStyleSheet()
+  {
+    const QString style_sheet = m_text_edit.toPlainText();
+
+    qApp->setStyleSheet(style_sheet);
+
+    std::ofstream file("style.css");
+
+    file << style_sheet.toStdString();
+  }
+
+private:
+  QVBoxLayout m_layout{ this };
+
+  QTextEdit m_text_edit{ this };
+
+  QPushButton m_apply_button{ tr("Apply"), this };
+};
+
+} // namespace
+
+AddressBar::AddressBar(QWidget* parent)
+  : QFrame(parent)
+{
+  setObjectName("AddressBar");
+
   m_layout.addWidget(&m_back_button);
-
   m_layout.addWidget(&m_forward_button);
-
   m_layout.addWidget(&m_refresh_button);
-
   m_layout.addWidget(&m_address_kind_box);
-
   m_layout.addWidget(&m_line_edit);
-
   m_layout.addWidget(&m_menu_button);
 
-  m_address_kind_box.addItem("\U0001f310", QString("tcp"));
-  m_address_kind_box.addItem("\U0001f4c1", QString("file"));
-  m_address_kind_box.addItem("\U0001f41b", QString("debug"));
+  m_address_kind_box.addItem("tcp", QString("tcp"));
+  m_address_kind_box.addItem("file", QString("file"));
+  m_address_kind_box.addItem("debug", QString("debug"));
+
+  m_menu_button.setMenu(&m_menu);
+
+  QAction* edit_style_sheet_action = m_menu.addAction("Edit Style Sheet");
+
+  connect(edit_style_sheet_action,
+          &QAction::triggered,
+          this,
+          &AddressBar::OpenStyleSheetEditor);
 
   QStringList debug_item_list;
   debug_item_list << "render";
@@ -122,6 +182,14 @@ void
 AddressBar::ToDebugMode()
 {
   SwitchMode(&m_debug_item_model, "Enter an aspect to debug.");
+}
+
+void
+AddressBar::OpenStyleSheetEditor()
+{
+  StyleSheetEditor editor;
+
+  editor.exec();
 }
 
 } // namespace vision::gui
