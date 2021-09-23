@@ -4,9 +4,7 @@ class QWidget;
 
 namespace vision::gui {
 
-class Controller;
-
 QWidget*
-CreatePage(QWidget* parent, Controller& controller);
+CreatePage(QWidget* parent);
 
 } // namespace vision::gui

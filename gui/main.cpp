@@ -2,7 +2,6 @@
 #include <QMainWindow>
 #include <QSurfaceFormat>
 
-#include "controller.hpp"
 #include "page.hpp"
 
 namespace {
@@ -10,8 +9,8 @@ namespace {
 class MainWindow : public QMainWindow
 {
 public:
-  MainWindow(vision::gui::Controller& controller)
-    : m_central_widget(vision::gui::CreatePage(this, controller))
+  MainWindow()
+    : m_central_widget(vision::gui::CreatePage(this))
   {
     resize(1280, 720);
 
@@ -42,10 +41,7 @@ main(int argc, char** argv)
   QSurfaceFormat::setDefaultFormat(format);
 #endif
 
-  std::unique_ptr<vision::gui::Controller> controller =
-    vision::gui::Controller::Create();
-
-  MainWindow main_window(*controller);
+  MainWindow main_window;
 
   main_window.show();
 

@@ -1,244 +1,127 @@
 #include "address_bar.hpp"
 
-#include "auto_complete_engine.hpp"
-
-#include <QComboBox>
-#include <QCompleter>
-#include <QFocusEvent>
-#include <QHBoxLayout>
-#include <QLineEdit>
-#include <QMenu>
-#include <QPushButton>
-#include <QStringListModel>
-#include <QTimer>
-#include <QWidget>
-
-#include <map>
-#include <vector>
-
-#include <QDebug>
-
 namespace vision::gui {
 
-namespace {
-
-class Menu final : public QMenu
+AddressBar::AddressBar(QWidget* parent)
+  : QWidget(parent)
 {
-public:
-  Menu(AddressBarObserver& observer, QPushButton* button, QWidget* parent)
-    : QMenu(parent)
-    , m_observer(observer)
-    , m_button(button)
-  {
-    QAction* view_monitor_action = addAction("View Monitor");
+  m_layout.addWidget(&m_back_button);
 
-    view_monitor_action->setCheckable(true);
+  m_layout.addWidget(&m_forward_button);
 
-    connect(
-      view_monitor_action, &QAction::toggled, this, &Menu::OnMonitorToggle);
+  m_layout.addWidget(&m_refresh_button);
 
-    addAction("About");
-  }
+  m_layout.addWidget(&m_address_kind_box);
 
-protected slots:
-  void OnMonitorToggle(bool checked)
-  {
-    m_observer.OnMonitorVisibilityToggle(checked);
-  }
+  m_layout.addWidget(&m_line_edit);
 
-protected:
-  void showEvent(QShowEvent*) override
-  {
-    const QPoint p = this->pos();
+  m_layout.addWidget(&m_menu_button);
 
-    const QRect geo = m_button->geometry();
+  m_address_kind_box.addItem("\U0001f310", QString("tcp"));
+  m_address_kind_box.addItem("\U0001f4c1", QString("file"));
+  m_address_kind_box.addItem("\U0001f41b", QString("debug"));
 
-    this->move(p.x() + geo.width() - this->geometry().width(), p.y());
-  }
+  QStringList debug_item_list;
+  debug_item_list << "render";
+  debug_item_list << "buffer_overflow";
+  debug_item_list << "bad_connection";
+  debug_item_list << "invalid_response";
+  m_debug_item_model.setStringList(debug_item_list);
 
-private:
-  AddressBarObserver& m_observer;
+  m_fs_model.setRootPath("/");
 
-  QPushButton* m_button;
-};
+  m_line_edit.setCompleter(&m_completer);
 
-class AddressBarButton final : public QPushButton
+  ToTcpMode();
+
+  connect(&m_address_kind_box,
+          QOverload<int>::of(&QComboBox::currentIndexChanged),
+          this,
+          &AddressBar::HandleModeSwitch);
+
+  connect(&m_refresh_button,
+          &QPushButton::clicked,
+          this,
+          &AddressBar::EmitConnectRequest);
+
+  connect(&m_line_edit,
+          &QLineEdit::returnPressed,
+          this,
+          &AddressBar::EmitConnectRequest);
+}
+
+void
+AddressBar::HandleModeSwitch(int index)
 {
-public:
-  AddressBarButton(const QString& text, QWidget* parent)
-    : QPushButton(text, parent)
-  {
-    setFlat(true);
-
-    setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
+  switch (GetAddressKind(m_address_kind_box.itemData(index).toString())) {
+    case AddressKind::Unknown:
+      break;
+    case AddressKind::Debug:
+      ToDebugMode();
+      break;
+    case AddressKind::File:
+      ToFileMode();
+      break;
+    case AddressKind::Tcp:
+      ToTcpMode();
+      break;
   }
-};
+}
 
-class AddressEdit : public QLineEdit
+void
+AddressBar::EmitConnectRequest()
 {
-public:
-  AddressEdit(std::unique_ptr<AutoCompleteEngine>&& ac_engine, QWidget* parent)
-    : QLineEdit(parent)
-    , m_auto_complete_engine(std::move(ac_engine))
-  {
-    m_auto_complete_engine->setParent(this);
+  Address addr{ GetCurrentAddressKind(), m_line_edit.text() };
 
-    setPlaceholderText("Enter an address to connect to.");
+  emit ConnectionRequest(addr);
+}
 
-    m_completer.setModel(&m_completion_model);
-
-    setCompleter(&m_completer);
-
-    connect(this, &QLineEdit::textEdited, this, &AddressEdit::UpdateCompleter);
-  }
-
-protected slots:
-  void UpdateCompleter(const QString& url_string)
-  {
-    m_auto_complete_engine->Execute(url_string);
-
-    qDebug() << m_auto_complete_engine->GetResults();
-
-    m_completion_model.setStringList(m_auto_complete_engine->GetResults());
-  }
-
-protected:
-  void focusInEvent(QFocusEvent* event) override
-  {
-    if (event->reason() == Qt::MouseFocusReason)
-      QTimer::singleShot(0, this, &QLineEdit::selectAll);
-
-    QLineEdit::focusInEvent(event);
-  }
-
-private:
-  std::unique_ptr<AutoCompleteEngine> m_auto_complete_engine;
-
-  QCompleter m_completer;
-
-  QStringListModel m_completion_model;
-};
-
-class AddressBar final : public QWidget
+void
+AddressBar::SwitchMode(QAbstractItemModel* model,
+                       const QString& placeholder_text)
 {
-public:
-  AddressBar(QWidget* parent,
-             std::unique_ptr<AutoCompleteEngine>&& ac_engine,
-             std::unique_ptr<AddressBarObserver>&& observer)
-    : QWidget(parent)
-    , m_observer(std::move(observer))
-    , m_line_edit(std::move(ac_engine), this)
-  {
-    m_address_kind_box.addItem(QString("\U0001f310"));
-    m_address_kind_box.addItem(QString("\U0001f4c1"));
+  m_completer.setModel(model);
 
-    m_layout.addWidget(&m_address_kind_box);
+  m_line_edit.setPlaceholderText(placeholder_text);
 
-    m_layout.addWidget(&m_line_edit);
+  m_line_edit.clear();
+}
 
-    m_layout.addWidget(&m_menu_button);
-
-    setSizePolicy(sizePolicy().horizontalPolicy(), QSizePolicy::Minimum);
-
-    connect(&m_line_edit,
-            &QLineEdit::returnPressed,
-            this,
-            &AddressBar::OnReturnPressed);
-
-    m_menu_button.setMenu(&m_menu);
-  }
-
-protected slots:
-  void OnReturnPressed()
-  {
-    m_observer->OnConnectionRequest(m_line_edit.text());
-  }
-
-private:
-  std::unique_ptr<AddressBarObserver> m_observer;
-
-  QComboBox m_address_kind_box{ this };
-
-  AddressBarButton m_menu_button{ "\u2630", this };
-
-  QHBoxLayout m_layout{ this };
-
-  AddressEdit m_line_edit;
-
-  Menu m_menu{ *m_observer, &m_menu_button, this };
-};
-
-} // namespace
-
-namespace {
-
-class CompositeObserver final : public AddressBarObserver
+AddressKind
+AddressBar::GetCurrentAddressKind() const
 {
-public:
-  void AddObserver(AddressBarObserver* observer)
-  {
-    m_observers.emplace_back(observer);
-  }
+  return GetAddressKind(m_address_kind_box.currentData().toString());
+}
 
-  void OnConnectionRequest(const QString& url) override
-  {
-    for (auto* observer : m_observers)
-      observer->OnConnectionRequest(url);
-  }
-
-  void OnMonitorVisibilityToggle(bool visible) override
-  {
-    for (auto* observer : m_observers)
-      observer->OnMonitorVisibilityToggle(visible);
-  }
-
-private:
-  std::vector<AddressBarObserver*> m_observers;
-};
-
-class AddressBarFactoryImpl final : public AddressBarFactory
+AddressKind
+AddressBar::GetAddressKind(const QString& kind)
 {
-public:
-  void AddScheme(const QString& scheme, QAbstractItemModel* model) override
-  {
-    if (!m_auto_complete_engine)
-      m_auto_complete_engine.reset(new AutoCompleteEngine(nullptr));
+  if (kind == "tcp")
+    return AddressKind::Tcp;
+  else if (kind == "file")
+    return AddressKind::File;
+  else if (kind == "debug")
+    return AddressKind::Debug;
 
-    m_auto_complete_engine->AddModel(scheme, model);
-  }
+  return AddressKind::Unknown;
+}
 
-  void AddObserver(AddressBarObserver* observer) override
-  {
-    if (!m_observer)
-      m_observer.reset(new CompositeObserver());
-
-    m_observer->AddObserver(observer);
-  }
-
-  auto CreateAddressBar(QWidget* parent) -> QWidget* override
-  {
-    if (!m_observer)
-      m_observer.reset(new CompositeObserver());
-
-    if (!m_auto_complete_engine)
-      m_auto_complete_engine.reset(new AutoCompleteEngine(nullptr));
-
-    return new AddressBar(
-      parent, std::move(m_auto_complete_engine), std::move(m_observer));
-  }
-
-private:
-  std::unique_ptr<AutoCompleteEngine> m_auto_complete_engine{ nullptr };
-
-  std::unique_ptr<CompositeObserver> m_observer;
-};
-
-} // namespace
-
-auto
-AddressBarFactory::Create() -> std::unique_ptr<AddressBarFactory>
+void
+AddressBar::ToTcpMode()
 {
-  return std::unique_ptr<AddressBarFactory>(new AddressBarFactoryImpl());
+  SwitchMode(&m_tcp_item_model, "Enter an address to connect to.");
+}
+
+void
+AddressBar::ToFileMode()
+{
+  SwitchMode(&m_fs_model, "Enter a program to launch.");
+}
+
+void
+AddressBar::ToDebugMode()
+{
+  SwitchMode(&m_debug_item_model, "Enter an aspect to debug.");
 }
 
 } // namespace vision::gui

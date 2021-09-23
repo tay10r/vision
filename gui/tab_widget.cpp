@@ -1,6 +1,5 @@
 #include "tab_widget.hpp"
 
-#include "controller.hpp"
 #include "page.hpp"
 
 #include <QLabel>

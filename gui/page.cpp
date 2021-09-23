@@ -2,7 +2,7 @@
 
 #include "address_bar.hpp"
 #include "connection.hpp"
-#include "controller.hpp"
+#include "debug_connection.hpp"
 #include "monitor.hpp"
 #include "resize_request.hpp"
 #include "response.hpp"
@@ -18,24 +18,50 @@ namespace {
 
 class Page final
   : public QWidget
-  , public AddressBarObserver
   , public ConnectionObserver
   , public ResponseObserver
   , public ViewObserver
 {
 public:
-  Page(QWidget* parent, Controller& controller)
+  Page(QWidget* parent)
     : QWidget(parent)
-    , m_address_bar(CreateAddressBar(controller))
-    , m_controller(controller)
   {
-    m_layout.addWidget(m_address_bar);
+    m_layout.addWidget(&m_address_bar);
 
     m_layout.addWidget(m_view, 1);
 
     m_layout.addWidget(m_monitor, 1);
 
     m_monitor->hide();
+
+    connect(&m_address_bar,
+            &AddressBar::ConnectionRequest,
+            this,
+            &Page::OnConnectionRequest);
+  }
+
+protected slots:
+  void OnConnectionRequest(const Address& address)
+  {
+    m_connection.reset();
+
+    switch (address.kind) {
+      case AddressKind::Debug:
+        m_connection = CreateDebugConnection(*this, address.data);
+        break;
+      case AddressKind::Tcp:
+        break;
+      case AddressKind::File:
+        break;
+      case AddressKind::Unknown:
+        break;
+    }
+
+    if (m_connection) {
+      m_connection->Connect();
+    } else {
+      // TODO
+    }
   }
 
 private:
@@ -91,15 +117,7 @@ private:
     m_connection->SendMouseButton(button_name_utf8, x, y, state);
   }
 
-  void OnConnectionRequest(const QString& url) override
-  {
-    m_connection = m_controller.CreateConnection(url, *this);
-
-    if (!m_connection->Connect())
-      m_monitor->LogError("Failed to connect to \"" + url + "\".");
-  }
-
-  void OnMonitorVisibilityToggle(bool visible) override
+  void OnMonitorVisibilityToggle(bool visible)
   {
     m_monitor->setVisible(visible);
   }
@@ -182,25 +200,14 @@ private:
     m_connection.reset();
   }
 
-  QWidget* CreateAddressBar(Controller& controller)
-  {
-    auto factory = controller.CreateAddressBarFactory();
-
-    factory->AddObserver(this);
-
-    return factory->CreateAddressBar(this);
-  }
-
 private:
-  QWidget* m_address_bar = nullptr;
+  AddressBar m_address_bar{ this };
 
   View* m_view{ CreateView(*this, this) };
 
   Monitor* m_monitor{ CreateMonitor(this) };
 
   QVBoxLayout m_layout{ this };
-
-  Controller& m_controller;
 
   std::unique_ptr<Connection> m_connection;
 
@@ -210,9 +217,9 @@ private:
 } // namespace
 
 QWidget*
-CreatePage(QWidget* parent, Controller& controller)
+CreatePage(QWidget* parent)
 {
-  return new Page(parent, controller);
+  return new Page(parent);
 }
 
 } // namespace vision::gui
