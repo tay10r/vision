@@ -72,6 +72,8 @@ CommandStream::SendResizeRequest(const ResizeRequest& req)
 
   stream << req.width << ' ' << req.height;
 
+  stream << ' ';
+
   stream << req.padded_width << ' ' << req.padded_height;
 
   stream << '\n';

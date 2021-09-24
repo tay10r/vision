@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.14.7)
 
-project(vision)
-
 find_package(Qt5 REQUIRED COMPONENTS Widgets Network Charts)
 
 find_package(OpenMP REQUIRED COMPONENTS CXX)
@@ -11,18 +9,10 @@ add_library(vision_gui
   address_bar.cpp
   command_stream.hpp
   command_stream.cpp
-  connection_view_proxy.hpp
-  connection_view_proxy.cpp
   content_view.hpp
   content_view.cpp
   process_view.hpp
   process_view.cpp
-  debug_connection.hpp
-  debug_connection.cpp
-  debug_render.hpp
-  debug_render.cpp
-  debug_input.hpp
-  debug_input.cpp
   page.hpp
   page.cpp
   view.hpp

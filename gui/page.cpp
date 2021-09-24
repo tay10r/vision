@@ -38,7 +38,9 @@ public:
   void SetContentView(ContentView* content_view)
   {
     if (m_content_view) {
+
       removeWidget(m_content_view);
+
       delete m_content_view;
     }
 
@@ -112,6 +114,8 @@ public:
 protected slots:
   void OnConnectionRequest(const Address& address)
   {
+    m_content_area.PrepareToClose();
+
     m_content_area.SetContentView(nullptr);
 
     switch (address.kind) {
@@ -135,6 +139,11 @@ private:
     QProcess* process = process_view->GetProcess();
 
     connect(process, &QProcess::errorOccurred, this, &PageImpl::OnProcessError);
+
+    connect(process,
+            QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+            this,
+            &PageImpl::OnProcessExit);
 
     ResponseSignalEmitter* response_signal_emitter =
       process_view->GetResponseSignalEmitter();
@@ -176,16 +185,29 @@ private:
         EmitError("Unknown error occurred.");
         break;
     }
+
+    DisconnectDueToError();
+  }
+
+  void OnProcessExit(int, QProcess::ExitStatus)
+  {
+    m_content_area.PrepareToClose();
+
+    m_content_area.SetContentView(nullptr);
   }
 
   void OnBufferOverflow(size_t buffer_max)
   {
     EmitError(QString("Buffer size exceeded %1").arg(buffer_max));
+
+    DisconnectDueToError();
   }
 
   void OnInvalidResponse(const QString& reason)
   {
     EmitError(QString("Invalid Response: ") + reason);
+
+    DisconnectDueToError();
   }
 
   void EmitError(const QString& msg)
@@ -206,11 +228,9 @@ private:
 
   void DisconnectDueToError()
   {
-#if 0
-    m_monitor->LogInfo("Disconnecting due to error.");
+    m_content_area.PrepareToClose();
 
-    ResetConnection();
-#endif
+    m_content_area.SetContentView(nullptr);
   }
 
 private:

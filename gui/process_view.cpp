@@ -1,5 +1,7 @@
 #include "process_view.hpp"
 
+#include "command_stream.hpp"
+#include "resize_request.hpp"
 #include "schedule.hpp"
 
 #include <QString>
@@ -11,20 +13,6 @@
 #include <QDebug>
 
 namespace vision::gui {
-
-namespace {
-
-void
-FlushAsLine(std::ostringstream& stream, QProcess& process)
-{
-  stream << '\n';
-
-  const std::string data = stream.str();
-
-  process.write(&data[0], data.size());
-}
-
-} // namespace
 
 ProcessView::ProcessView(QWidget* parent, const QString& program_path)
   : ContentView(parent)
@@ -65,10 +53,23 @@ void
 ProcessView::PrepareToClose()
 {
   if (m_process.state() != QProcess::NotRunning) {
-    m_process.write("q\n", 2);
 
-    if (!m_process.waitForFinished(1000))
+    qDebug() << "here: " << m_process.state();
+
+    CommandStream command_stream(m_process);
+
+    command_stream.SendQuit();
+
+    if (!m_process.waitForFinished(1000)) {
+      qDebug() << "killing process";
       m_process.kill();
+      if (m_process.waitForFinished(1000))
+        qDebug() << "process was killed";
+      else
+        qDebug() << "process was not killed.";
+    } else {
+      qDebug() << "process exited gracefully";
+    }
   }
 }
 
@@ -91,6 +92,10 @@ ProcessView::ReadResponse()
 void
 ProcessView::BeginRendering()
 {
+  CommandStream command_stream(m_process);
+
+  command_stream.SendResizeRequest(GetView()->MakeResizeRequest());
+
   GetView()->NewFrame();
 }
 
@@ -103,63 +108,41 @@ ProcessView::OnError()
 void
 ProcessView::OnKeyEvent(const QString& key, bool state)
 {
-  std::ostringstream stream;
+  CommandStream command_stream(m_process);
 
-  stream << "k " << key.toStdString() << ' ' << int(state);
-
-  FlushAsLine(stream, m_process);
+  command_stream.SendKey(key, state);
 }
 
 void
 ProcessView::OnMouseButtonEvent(const QString& button, int x, int y, bool state)
 {
-  std::ostringstream stream;
+  CommandStream command_stream(m_process);
 
-  stream << "b " << button.toStdString() << ' ' << x << ' ' << y << ' '
-         << int(state);
-
-  FlushAsLine(stream, m_process);
+  command_stream.SendMouseButton(button, x, y, state);
 }
 
 void
 ProcessView::OnMouseMoveEvent(int x, int y)
 {
-  std::ostringstream stream;
+  CommandStream command_stream(m_process);
 
-  stream << "m " << x << ' ' << y;
-
-  FlushAsLine(stream, m_process);
+  command_stream.SendMouseMove(x, y);
 }
 
 void
 ProcessView::OnNewFrame(const Schedule& schedule)
 {
-  const size_t req_count = schedule.GetRenderRequestCount();
+  CommandStream command_stream(m_process);
 
-  std::ostringstream stream;
-
-  for (size_t i = 0; i < req_count; i++) {
-
-    const RenderRequest req = schedule.GetRenderRequest(i);
-
-    stream << "r " << req.x_pixel_count << ' ' << req.y_pixel_count;
-
-    stream << '\n';
-  }
-
-  const std::string data = stream.str();
-
-  m_process.write(&data[0], data.size());
+  command_stream.SendAllRenderRequests(schedule);
 }
 
 void
 ProcessView::OnResize(size_t w, size_t h, size_t padded_w, size_t padded_h)
 {
-  std::ostringstream stream;
+  CommandStream command_stream(m_process);
 
-  stream << "s " << w << ' ' << h << ' ' << padded_w << ' ' << padded_h;
-
-  FlushAsLine(stream, m_process);
+  command_stream.SendResizeRequest(ResizeRequest{ w, h, padded_w, padded_h });
 }
 
 } // namespace vision::gui

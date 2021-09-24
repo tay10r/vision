@@ -258,12 +258,8 @@ protected:
   {
     QString key_text = event->text();
 
-    if (!key_text.isEmpty() && !event->isAutoRepeat()) {
-
+    if (!key_text.isEmpty() && !event->isAutoRepeat())
       NotifyKeyEvent(key_text, true);
-
-      NewFrame();
-    }
 
     QOpenGLWidget::keyPressEvent(event);
   }
@@ -272,12 +268,8 @@ protected:
   {
     QString key_text = event->text();
 
-    if (!key_text.isEmpty() && !event->isAutoRepeat()) {
-
+    if (!key_text.isEmpty() && !event->isAutoRepeat())
       NotifyKeyEvent(key_text, false);
-
-      NewFrame();
-    }
 
     QOpenGLWidget::keyPressEvent(event);
   }
@@ -310,16 +302,14 @@ protected:
 
   void mousePressEvent(QMouseEvent* event) override
   {
-    if (NotifyMouseButtonEvent(event, true))
-      NewFrame();
+    NotifyMouseButtonEvent(event, true);
 
     QOpenGLWidget::mousePressEvent(event);
   }
 
   void mouseReleaseEvent(QMouseEvent* event) override
   {
-    if (NotifyMouseButtonEvent(event, false))
-      NewFrame();
+    NotifyMouseButtonEvent(event, false);
 
     QOpenGLWidget::mouseReleaseEvent(event);
   }
