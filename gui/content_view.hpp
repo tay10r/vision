@@ -6,8 +6,6 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
-class QWidget;
-
 namespace vision::gui {
 
 class View;
@@ -21,6 +19,8 @@ public:
   ContentView(QWidget* parent);
 
   ContentView(const ContentView&) = delete;
+
+  virtual void PrepareToClose() = 0;
 
 signals:
   void BufferOverflow(size_t limit);

@@ -64,6 +64,12 @@ public:
     }
   }
 
+  void PrepareToClose()
+  {
+    if (m_content_view)
+      m_content_view->PrepareToClose();
+  }
+
 private:
   void RemoveErrorView()
   {
@@ -85,11 +91,11 @@ private:
   QWidget* m_error_view = nullptr;
 };
 
-class Page final : public QWidget
+class PageImpl final : public Page
 {
 public:
-  Page(QWidget* parent)
-    : QWidget(parent)
+  PageImpl(QWidget* parent)
+    : Page(parent)
   {
     m_layout.addWidget(&m_address_bar);
 
@@ -98,8 +104,10 @@ public:
     connect(&m_address_bar,
             &AddressBar::ConnectionRequest,
             this,
-            &Page::OnConnectionRequest);
+            &PageImpl::OnConnectionRequest);
   }
+
+  void PrepareToClose() override { m_content_area.PrepareToClose(); }
 
 protected slots:
   void OnConnectionRequest(const Address& address)
@@ -126,17 +134,17 @@ private:
 
     QProcess* process = process_view->GetProcess();
 
-    connect(process, &QProcess::errorOccurred, this, &Page::OnProcessError);
+    connect(process, &QProcess::errorOccurred, this, &PageImpl::OnProcessError);
 
     connect(process_view,
             &ProcessView::BufferOverflow,
             this,
-            &Page::OnBufferOverflow);
+            &PageImpl::OnBufferOverflow);
 
     connect(process_view,
             &ProcessView::InvalidResponse,
             this,
-            &Page::OnInvalidResponse);
+            &PageImpl::OnInvalidResponse);
 
     m_content_area.SetContentView(process_view);
 
@@ -212,10 +220,10 @@ private:
 
 } // namespace
 
-QWidget*
+Page*
 CreatePage(QWidget* parent)
 {
-  return new Page(parent);
+  return new PageImpl(parent);
 }
 
 } // namespace vision::gui

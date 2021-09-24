@@ -10,17 +10,25 @@ class MainWindow : public QMainWindow
 {
 public:
   MainWindow()
-    : m_central_widget(vision::gui::CreatePage(this))
+    : m_page(vision::gui::CreatePage(this))
   {
     resize(1280, 720);
 
     setWindowTitle("Vision");
 
-    setCentralWidget(m_central_widget);
+    setCentralWidget(m_page);
+  }
+
+protected:
+  void closeEvent(QCloseEvent* closeEvent) override
+  {
+    m_page->PrepareToClose();
+
+    QMainWindow::closeEvent(closeEvent);
   }
 
 private:
-  QWidget* m_central_widget;
+  vision::gui::Page* m_page;
 };
 
 const char* stylesheet = R"(

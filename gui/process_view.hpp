@@ -19,6 +19,8 @@ public:
 
   QProcess* GetProcess() noexcept { return &m_process; }
 
+  void PrepareToClose() override;
+
 protected slots:
   void ForwardStandardErrorToLog();
 
