@@ -70,6 +70,8 @@ public:
     m_buffer.reserve(max_size);
   }
 
+  size_t GetMaxBufferSize() const noexcept override { return m_buffer_max; }
+
 private:
   bool ParseBuffer()
   {

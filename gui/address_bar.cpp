@@ -69,8 +69,7 @@ AddressBar::AddressBar(QWidget* parent)
   m_layout.addWidget(&m_menu_button);
 
   m_address_kind_box.addItem("tcp", QString("tcp"));
-  m_address_kind_box.addItem("file", QString("file"));
-  m_address_kind_box.addItem("debug", QString("debug"));
+  m_address_kind_box.addItem("program", QString("file"));
 
   m_menu_button.setMenu(&m_menu);
 

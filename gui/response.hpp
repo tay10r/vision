@@ -35,6 +35,8 @@ public:
   virtual bool Write(const char* data, size_t length) = 0;
 
   virtual void SetMaxBufferSize(size_t max_size) = 0;
+
+  virtual size_t GetMaxBufferSize() const noexcept = 0;
 };
 
 } // namespace vision::gui

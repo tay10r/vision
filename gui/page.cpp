@@ -1,6 +1,9 @@
 #include "page.hpp"
 
 #include "address_bar.hpp"
+#include "content_view.hpp"
+#include "process_view.hpp"
+#include "view.hpp"
 
 #include <QLabel>
 #include <QStackedWidget>
@@ -32,8 +35,54 @@ public:
     addWidget(&m_initial_content_view);
   }
 
+  void SetContentView(ContentView* content_view)
+  {
+    if (m_content_view) {
+      removeWidget(m_content_view);
+      delete m_content_view;
+    }
+
+    m_content_view = content_view;
+
+    if (content_view) {
+      const int index = addWidget(m_content_view);
+      setCurrentIndex(index);
+    }
+
+    RemoveErrorView();
+  }
+
+  void SetErrorView(QWidget* error_view)
+  {
+    RemoveErrorView();
+
+    m_error_view = error_view;
+
+    if (m_error_view) {
+      const int index = addWidget(m_error_view);
+      setCurrentIndex(index);
+    }
+  }
+
+private:
+  void RemoveErrorView()
+  {
+    if (m_error_view) {
+
+      removeWidget(m_error_view);
+
+      delete m_error_view;
+
+      m_error_view = nullptr;
+    }
+  }
+
 private:
   InitialContentView m_initial_content_view{ this };
+
+  ContentView* m_content_view = nullptr;
+
+  QWidget* m_error_view = nullptr;
 };
 
 class Page final : public QWidget
@@ -55,30 +104,88 @@ public:
 protected slots:
   void OnConnectionRequest(const Address& address)
   {
-#if 0
-    ResetConnection();
+    m_content_area.SetContentView(nullptr);
 
     switch (address.kind) {
       case AddressKind::Debug:
-        CreateConnection(CreateDebugConnection(*this, address.data));
-        break;
-      case AddressKind::Tcp:
         break;
       case AddressKind::File:
+        StartProgram(address.data);
+        break;
+      case AddressKind::Tcp:
         break;
       case AddressKind::Unknown:
         break;
     }
-
-    Connection* connection = GetConnection();
-    if (connection) {
-      connection->Connect();
-    }
-#endif
-    (void)address;
   }
 
 private:
+  void StartProgram(const QString& path)
+  {
+    ProcessView* process_view = new ProcessView(&m_content_area, path);
+
+    QProcess* process = process_view->GetProcess();
+
+    connect(process, &QProcess::errorOccurred, this, &Page::OnProcessError);
+
+    connect(process_view,
+            &ProcessView::BufferOverflow,
+            this,
+            &Page::OnBufferOverflow);
+
+    connect(process_view,
+            &ProcessView::InvalidResponse,
+            this,
+            &Page::OnInvalidResponse);
+
+    m_content_area.SetContentView(process_view);
+
+    process->start();
+  }
+
+  void OnProcessError(QProcess::ProcessError error)
+  {
+    switch (error) {
+      case QProcess::FailedToStart:
+        EmitError("Failed to start process.");
+        break;
+      case QProcess::Crashed:
+        EmitError("Process crashed.");
+        break;
+      case QProcess::Timedout:
+        EmitError("Process timed out.");
+        break;
+      case QProcess::WriteError:
+        EmitError("Write error occurred.");
+        break;
+      case QProcess::ReadError:
+        EmitError("Read error occurred.");
+        break;
+      case QProcess::UnknownError:
+        EmitError("Unknown error occurred.");
+        break;
+    }
+  }
+
+  void OnBufferOverflow(size_t buffer_max)
+  {
+    EmitError(QString("Buffer size exceeded %1").arg(buffer_max));
+  }
+
+  void OnInvalidResponse(const QString& reason)
+  {
+    EmitError(QString("Invalid Response: ") + reason);
+  }
+
+  void EmitError(const QString& msg)
+  {
+    QLabel* label = new QLabel(msg, &m_content_area);
+
+    label->setAlignment(Qt::AlignCenter);
+
+    m_content_area.SetErrorView(label);
+  }
+
   void OnMonitorVisibilityToggle(bool visible)
   {
     // m_monitor->setVisible(visible);

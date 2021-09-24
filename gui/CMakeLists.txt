@@ -11,6 +11,10 @@ add_library(vision_gui
   address_bar.cpp
   connection_view_proxy.hpp
   connection_view_proxy.cpp
+  content_view.hpp
+  content_view.cpp
+  process_view.hpp
+  process_view.cpp
   debug_connection.hpp
   debug_connection.cpp
   debug_render.hpp
@@ -59,6 +63,10 @@ if(NOT MSVC)
 endif(NOT MSVC)
 
 target_link_libraries(vision PUBLIC vision::gui)
+
+set_target_properties(vision
+  PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
 
 #############
 # View Test #
