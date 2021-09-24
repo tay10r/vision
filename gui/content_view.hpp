@@ -1,18 +1,19 @@
 #pragma once
 
 #include "response.hpp"
+#include "response_signal_emitter.hpp"
 
 #include <QByteArray>
 #include <QVBoxLayout>
 #include <QWidget>
 
+class QIODevice;
+
 namespace vision::gui {
 
 class View;
 
-class ContentView
-  : public QWidget
-  , public ResponseObserver
+class ContentView : public QWidget
 {
   Q_OBJECT
 public:
@@ -22,10 +23,10 @@ public:
 
   virtual void PrepareToClose() = 0;
 
-signals:
-  void BufferOverflow(size_t limit);
-
-  void InvalidResponse(const QString& reason);
+  ResponseSignalEmitter* GetResponseSignalEmitter()
+  {
+    return &m_response_signal_emitter;
+  }
 
 protected:
   View* GetView() noexcept { return m_view; }
@@ -34,24 +35,20 @@ protected:
 
   void HandleResponse(const QByteArray&);
 
-  void OnBufferOverflow() override;
-
   void OnRGBBuffer(const unsigned char* rgb_buffer,
                    size_t w,
                    size_t h,
-                   size_t request_id) override;
-
-  void OnInvalidResponse(const std::string_view& reason) override;
-
-  virtual void OnError() = 0;
+                   size_t request_id);
 
 private:
   View* m_view;
 
   QVBoxLayout m_layout{ this };
 
+  ResponseSignalEmitter m_response_signal_emitter{ this };
+
   std::unique_ptr<ResponseParser> m_response_parser =
-    ResponseParser::Create(*this);
+    ResponseParser::Create(m_response_signal_emitter);
 };
 
 } // namespace vision::gui

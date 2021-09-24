@@ -46,7 +46,7 @@ public:
   bool Write(const char* data, size_t length) override
   {
     if ((m_buffer.size() + length) > m_buffer_max) {
-      m_observer.OnBufferOverflow();
+      m_observer.OnBufferOverflow(m_buffer_max);
       m_buffer.clear();
       return false;
     }

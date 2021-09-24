@@ -136,13 +136,16 @@ private:
 
     connect(process, &QProcess::errorOccurred, this, &PageImpl::OnProcessError);
 
-    connect(process_view,
-            &ProcessView::BufferOverflow,
+    ResponseSignalEmitter* response_signal_emitter =
+      process_view->GetResponseSignalEmitter();
+
+    connect(response_signal_emitter,
+            &ResponseSignalEmitter::BufferOverflow,
             this,
             &PageImpl::OnBufferOverflow);
 
-    connect(process_view,
-            &ProcessView::InvalidResponse,
+    connect(response_signal_emitter,
+            &ResponseSignalEmitter::InvalidResponse,
             this,
             &PageImpl::OnInvalidResponse);
 

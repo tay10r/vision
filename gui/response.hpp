@@ -16,7 +16,7 @@ public:
 
   /// This is called when the buffer reaches a size that is considered too large
   /// to be a valid response.
-  virtual void OnBufferOverflow() = 0;
+  virtual void OnBufferOverflow(size_t buffer_max) = 0;
 
   virtual void OnRGBBuffer(const unsigned char* buffer,
                            size_t width,

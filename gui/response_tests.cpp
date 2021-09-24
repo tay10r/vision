@@ -22,7 +22,7 @@ public:
     m_output << "InvalidResponse: " << reason << '\n';
   }
 
-  void OnBufferOverflow() override { m_output << "BufferOverflow\n"; }
+  void OnBufferOverflow(size_t) override { m_output << "BufferOverflow\n"; }
 
   void OnRGBBuffer(const unsigned char*, size_t w, size_t h, size_t id) override
   {

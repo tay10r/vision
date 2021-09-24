@@ -33,6 +33,8 @@ add_library(vision_gui
   monitor.cpp
   response.hpp
   response.cpp
+  response_signal_emitter.hpp
+  response_signal_emitter.cpp
   vertex.hpp
   vertex.cpp
   lexer.hpp

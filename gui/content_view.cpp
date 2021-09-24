@@ -9,32 +9,17 @@ ContentView::ContentView(QWidget* parent)
   , m_view(CreateView(this))
 {
   m_layout.addWidget(m_view);
+
+  connect(&m_response_signal_emitter,
+          &ResponseSignalEmitter::RGBBuffer,
+          this,
+          &ContentView::OnRGBBuffer);
 }
 
 void
 ContentView::HandleResponse(const QByteArray& data)
 {
   m_response_parser->Write(data.constData(), data.size());
-}
-
-void
-ContentView::OnBufferOverflow()
-{
-  const size_t buffer_max = m_response_parser->GetMaxBufferSize();
-
-  emit BufferOverflow(buffer_max);
-
-  OnError();
-}
-
-void
-ContentView::OnInvalidResponse(const std::string_view& reason)
-{
-  const QString reason_copy(QString::fromUtf8(reason.data(), reason.size()));
-
-  emit InvalidResponse(reason_copy);
-
-  OnError();
 }
 
 void

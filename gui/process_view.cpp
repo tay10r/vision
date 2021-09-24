@@ -64,16 +64,11 @@ ProcessView::ProcessView(QWidget* parent, const QString& program_path)
 void
 ProcessView::PrepareToClose()
 {
-  qDebug() << "here: " << __LINE__;
-
   if (m_process.state() != QProcess::NotRunning) {
-    qDebug() << "here: " << __LINE__;
     m_process.write("q\n", 2);
 
-    if (!m_process.waitForFinished(1000)) {
-      qDebug() << "here: " << __LINE__;
+    if (!m_process.waitForFinished(1000))
       m_process.kill();
-    }
   }
 }
 
