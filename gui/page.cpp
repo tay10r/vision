@@ -6,7 +6,9 @@
 #include "view.hpp"
 
 #include <QLabel>
+#include <QProcess>
 #include <QStackedWidget>
+#include <QTimer>
 #include <QVBoxLayout>
 #include <QWidget>
 
@@ -37,21 +39,27 @@ public:
 
   void SetContentView(ContentView* content_view)
   {
+    RemoveContentView();
+
+    RemoveErrorView();
+
+    m_content_view = content_view;
+
+    const int index = addWidget(m_content_view);
+
+    setCurrentIndex(index);
+  }
+
+  void RemoveContentView()
+  {
     if (m_content_view) {
 
       removeWidget(m_content_view);
 
       delete m_content_view;
+
+      m_content_view = nullptr;
     }
-
-    m_content_view = content_view;
-
-    if (content_view) {
-      const int index = addWidget(m_content_view);
-      setCurrentIndex(index);
-    }
-
-    RemoveErrorView();
   }
 
   void SetErrorView(QWidget* error_view)
@@ -60,19 +68,11 @@ public:
 
     m_error_view = error_view;
 
-    if (m_error_view) {
-      const int index = addWidget(m_error_view);
-      setCurrentIndex(index);
-    }
+    const int index = addWidget(m_error_view);
+
+    setCurrentIndex(index);
   }
 
-  void PrepareToClose()
-  {
-    if (m_content_view)
-      m_content_view->PrepareToClose();
-  }
-
-private:
   void RemoveErrorView()
   {
     if (m_error_view) {
@@ -109,15 +109,33 @@ public:
             &PageImpl::OnConnectionRequest);
   }
 
-  void PrepareToClose() override { m_content_area.PrepareToClose(); }
+  void PrepareToClose() override
+  {
+    // TODO : Ask user for verification of force quit
+
+    if (m_content_view) {
+
+      m_content_view->ForceQuit();
+    }
+  }
 
 protected slots:
   void OnConnectionRequest(const Address& address)
   {
-    m_content_area.PrepareToClose();
+    if (m_content_view) {
 
-    m_content_area.SetContentView(nullptr);
+      Disconnect();
 
+      m_connection_queue.emplace_back(address);
+
+    } else {
+
+      Connect(address);
+    }
+  }
+
+  void Connect(const Address& address)
+  {
     switch (address.kind) {
       case AddressKind::Debug:
         break;
@@ -140,23 +158,24 @@ private:
 
     connect(process, &QProcess::errorOccurred, this, &PageImpl::OnProcessError);
 
+    connect(process, &QProcess::started, this, &PageImpl::OnProcessStarted);
+
     connect(process,
             QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
             this,
             &PageImpl::OnProcessExit);
 
-    ResponseSignalEmitter* response_signal_emitter =
-      process_view->GetResponseSignalEmitter();
-
-    connect(response_signal_emitter,
-            &ResponseSignalEmitter::BufferOverflow,
+    connect(process_view,
+            &ContentView::BufferOverflow,
             this,
             &PageImpl::OnBufferOverflow);
 
-    connect(response_signal_emitter,
-            &ResponseSignalEmitter::InvalidResponse,
+    connect(process_view,
+            &ContentView::InvalidResponse,
             this,
             &PageImpl::OnInvalidResponse);
+
+    m_content_view = process_view;
 
     m_content_area.SetContentView(process_view);
 
@@ -186,28 +205,38 @@ private:
         break;
     }
 
-    DisconnectDueToError();
+    Disconnect();
+  }
+
+  void OnProcessStarted()
+  {
+    if (m_content_view) {
+
+      m_content_view->BeginRendering();
+    }
   }
 
   void OnProcessExit(int, QProcess::ExitStatus)
   {
-    m_content_area.PrepareToClose();
+    m_content_area.RemoveContentView();
 
-    m_content_area.SetContentView(nullptr);
+    m_content_view = nullptr;
+
+    CheckConnectionQueue();
   }
 
   void OnBufferOverflow(size_t buffer_max)
   {
     EmitError(QString("Buffer size exceeded %1").arg(buffer_max));
 
-    DisconnectDueToError();
+    Disconnect();
   }
 
   void OnInvalidResponse(const QString& reason)
   {
     EmitError(QString("Invalid Response: ") + reason);
 
-    DisconnectDueToError();
+    Disconnect();
   }
 
   void EmitError(const QString& msg)
@@ -226,11 +255,34 @@ private:
     (void)visible;
   }
 
-  void DisconnectDueToError()
+  void Disconnect()
   {
-    m_content_area.PrepareToClose();
+    if (m_content_view) {
 
-    m_content_area.SetContentView(nullptr);
+      m_content_view->SendQuitCommand();
+
+      QTimer::singleShot(1000, this, &PageImpl::DisconnectExpiration);
+    }
+  }
+
+  /// Called when either the process or connection is taking too long to exit.
+  void DisconnectExpiration()
+  {
+    if (m_content_view) {
+
+      m_content_view->ForceQuit();
+
+      m_content_area.RemoveContentView();
+
+      m_content_view = nullptr;
+    }
+
+    CheckConnectionQueue();
+  }
+
+  void CheckConnectionQueue()
+  {
+    // TODO
   }
 
 private:
@@ -238,7 +290,11 @@ private:
 
   ContentArea m_content_area{ this };
 
+  ContentView* m_content_view = nullptr;
+
   QVBoxLayout m_layout{ this };
+
+  std::vector<Address> m_connection_queue;
 };
 
 } // namespace

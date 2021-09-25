@@ -9,6 +9,8 @@
 #include <QIODevice>
 #include <QString>
 
+#include <QDebug>
+
 namespace vision::gui {
 
 namespace {
@@ -26,6 +28,8 @@ Flush(std::ostringstream& stream, QIODevice& io_device)
 void
 CommandStream::SendAllRenderRequests(const Schedule& schedule)
 {
+  qDebug() << "render";
+
   std::ostringstream stream;
 
   const size_t req_count = schedule.GetRenderRequestCount();
@@ -36,6 +40,8 @@ CommandStream::SendAllRenderRequests(const Schedule& schedule)
 
     Write(stream, req);
   }
+
+  qDebug() << "render: " << stream.str().c_str();
 
   Flush(stream, m_io_device);
 }
@@ -75,6 +81,8 @@ CommandStream::SendResizeRequest(const ResizeRequest& req)
   stream << ' ';
 
   stream << req.padded_width << ' ' << req.padded_height;
+
+  qDebug() << "resize: " << stream.str().c_str();
 
   stream << '\n';
 

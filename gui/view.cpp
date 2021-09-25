@@ -20,6 +20,8 @@
 #include <assert.h>
 #include <stdint.h>
 
+#include <QDebug>
+
 #ifdef NDEBUG
 #undef assert
 #define assert(expr) ((void)expr)
@@ -323,8 +325,6 @@ protected:
                                       ":/shaders/blit_partition.frag");
 
     m_program.link();
-
-    NewFrame();
   }
 
   void paintGL() override

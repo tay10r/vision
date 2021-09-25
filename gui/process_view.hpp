@@ -1,57 +1,38 @@
 #pragma once
 
 #include "content_view.hpp"
-#include "view.hpp"
 
-#include <QProcess>
-#include <QTabWidget>
-#include <QTextEdit>
-#include <QVBoxLayout>
+class QProcess;
+class QByteArray;
 
 namespace vision::gui {
 
-class ProcessView final
-  : public ContentView
-  , public ViewObserver
+class ProcessViewImpl;
+
+class ProcessView : public ContentView
 {
+  Q_OBJECT
 public:
   ProcessView(QWidget* parent, const QString& program_path);
 
-  QProcess* GetProcess() noexcept { return &m_process; }
+  ~ProcessView();
 
-  void PrepareToClose() override;
+  QProcess* GetProcess();
+
+  void StartProcess();
+
+  void ForceQuit() override;
 
 protected slots:
-  void ForwardStandardErrorToLog();
+  void ReadStandardOutput();
 
-  void ReadResponse();
-
-  void OnError();
-
-  void BeginRendering();
-
-protected:
-  void OnKeyEvent(const QString& key, bool state) override;
-
-  void OnMouseButtonEvent(const QString& button,
-                          int x,
-                          int y,
-                          bool state) override;
-
-  void OnMouseMoveEvent(int x, int y) override;
-
-  void OnNewFrame(const Schedule&) override;
-
-  void OnResize(size_t w, size_t h, size_t padded_w, size_t padded_h) override;
+  void ReadStandardError();
 
 private:
-  QProcess m_process;
+  ProcessView(QWidget* parent, QProcess* process);
 
-  QWidget* m_view;
-
-  QTabWidget m_tool_tabs{ this };
-
-  QTextEdit m_stderr_log{ &m_tool_tabs };
+private:
+  ProcessViewImpl* m_impl;
 };
 
 } // namespace vision::gui

@@ -1,54 +1,54 @@
 #pragma once
 
-#include "response.hpp"
-#include "response_signal_emitter.hpp"
-
-#include <QByteArray>
-#include <QVBoxLayout>
 #include <QWidget>
 
 class QIODevice;
+class QString;
 
 namespace vision::gui {
 
-class View;
+class ContentViewImpl;
 
 class ContentView : public QWidget
 {
   Q_OBJECT
 public:
-  ContentView(QWidget* parent);
+  ContentView(QWidget* parent, QIODevice* io_device);
 
-  ContentView(const ContentView&) = delete;
+  virtual ~ContentView();
 
-  virtual void PrepareToClose() = 0;
+  QIODevice* GetIODevice() noexcept;
 
-  ResponseSignalEmitter* GetResponseSignalEmitter()
-  {
-    return &m_response_signal_emitter;
-  }
+  void BeginRendering();
+
+  void SendQuitCommand();
+
+  virtual void ForceQuit() = 0;
+
+signals:
+  void InvalidResponse(const QString& reason);
+
+  void BufferOverflow(size_t buffer_max);
 
 protected:
-  View* GetView() noexcept { return m_view; }
+  void HandleIncomingData(const QByteArray&);
 
-  QVBoxLayout* GetLayout() noexcept { return &m_layout; }
+protected slots:
+  void ReadIODevice();
 
-  void HandleResponse(const QByteArray&);
+  void ForwardRGBBuffer(const unsigned char* rgb_buffer,
+                        size_t w,
+                        size_t h,
+                        size_t req_id);
 
-  void OnRGBBuffer(const unsigned char* rgb_buffer,
-                   size_t w,
-                   size_t h,
-                   size_t request_id);
+protected:
+  void AddToolTab(const QString& name, QWidget* widget);
 
 private:
-  View* m_view;
-
-  QVBoxLayout m_layout{ this };
-
-  ResponseSignalEmitter m_response_signal_emitter{ this };
-
-  std::unique_ptr<ResponseParser> m_response_parser =
-    ResponseParser::Create(m_response_signal_emitter);
+  ContentViewImpl* m_impl;
 };
+
+ContentView*
+CreateContentView(QWidget* parent, QIODevice* io_device);
 
 } // namespace vision::gui
