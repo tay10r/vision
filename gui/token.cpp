@@ -1,5 +1,7 @@
 #include "token.hpp"
 
+#include <ostream>
+
 namespace vision::gui {
 
 std::ostream&

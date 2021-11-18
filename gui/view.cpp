@@ -16,6 +16,7 @@
 
 #include <map>
 #include <optional>
+#include <memory>
 
 #include <assert.h>
 #include <stdint.h>
